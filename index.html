@@ -47,10 +47,7 @@
     border-bottom: 2px solid rgba(168,85,247,0.4);
   }
 
-  #game-canvas {
-    width: 100%;
-    height: 100%;
-  }
+  #game-canvas { width: 100%; height: 100%; }
 
   #leaderboard {
     margin-top: 16px;
@@ -190,7 +187,6 @@
 </head>
 <body>
 
-<!-- 昵称输入弹窗 -->
 <div id="name-modal">
   <div class="box">
     <h2>🎮 刘星快跑</h2>
@@ -229,7 +225,6 @@
 </div>
 
 <script>
-// ─── Supabase ───────────────────────────────────────────────
 const SUPABASE_URL = 'https://txwskivbvslcammgdbzw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8';
 
@@ -267,11 +262,27 @@ async function loadLeaderboard() {
   ).join('');
 }
 
-// ─── Game ───────────────────────────────────────────────────
+// ─── 常量 ────────────────────────────────────────────────────
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const W = 800, H = 220;
-const GROUND = H - 40;
+const GROUND = H - 40;        // 地面Y坐标
+const PLAYER_FS = 36;         // 正常字号
+const PLAYER_DUCK_FS = 20;    // 蹲下字号
+// 刘星站立时碰撞箱高度
+const PLAYER_H = 34;
+const PLAYER_DUCK_H = 18;
+const PLAYER_W = 60;
+
+// "一"的三种高度类型
+// high: 贴近地面上方，必须跳过
+// mid:  腰部，必须蹲过
+// safe: 高空，自动飞过不需要操作
+const YI_TYPES = {
+  high: { yOffset: -8,  label: 'must_jump' },  // y = GROUND - PLAYER_H - 8  (头顶高度)
+  mid:  { yOffset: -50, label: 'must_duck' },  // y = GROUND - 50 (腰部，蹲下可过)
+  safe: { yOffset: -120, label: 'safe' }        // y = GROUND - 120 (高空)
+};
 
 let playerName = '匿名';
 let state = 'idle';
@@ -284,14 +295,8 @@ const player = {
   vy: 0,
   grounded: true,
   ducking: false,
-  baseFontSize: 36,
-  duckFontSize: 20,
-  label: '刘星',
   wobble: 0
 };
-
-function playerH() { return player.ducking ? player.duckFontSize : player.baseFontSize; }
-function playerW() { return player.ducking ? 44 : 72; }
 
 let obstacles = [];
 let particles = [];
@@ -303,30 +308,60 @@ let stars = Array.from({length: 60}, () => ({
   a: Math.random()
 }));
 
+// ─── 障碍物生成 ──────────────────────────────────────────────
 function spawnObstacle() {
   const roll = Math.random();
-  if (roll < 0.25 && score > 200) {
-    // 组合：地面黄玲 + 中空"一"，逼玩家两难
-    const size = 28 + Math.floor(Math.random() * 16);
-    obstacles.push({ type: 'ground', x: W + 10, y: GROUND - size + 10, size, label: '黄玲', w: size * 2.2 });
-    obstacles.push({ type: 'sky', x: W + 120, y: GROUND - player.baseFontSize - 10, size: 32, label: '一', w: 32 });
-  } else if (roll < 0.6) {
-    // 普通地面障碍
-    const size = 24 + Math.floor(Math.random() * 24);
-    obstacles.push({ type: 'ground', x: W + 10, y: GROUND - size + 10, size, label: '黄玲', w: size * 2.2 });
+
+  if (roll < 0.55) {
+    // 黄玲：地面障碍，只能跳过
+    // 随机宽度：1~3个字并排
+    const count = Math.random() < 0.4 ? (Math.random() < 0.5 ? 2 : 3) : 1;
+    const fs = 32;
+    const spacing = fs + 4;
+    for (let i = 0; i < count; i++) {
+      obstacles.push({
+        type: 'ground',
+        x: W + 10 + i * spacing,
+        // 底部贴地面
+        y: GROUND,
+        size: fs,
+        label: '黄玲',
+        w: fs - 4,
+        h: fs
+      });
+    }
   } else {
-    // 空中障碍：高空可蹲过，中空必须跳过
-    const highOrMid = Math.random() < 0.5;
-    const y = highOrMid ? 40 + Math.random() * 30 : GROUND - player.baseFontSize - 5;
-    obstacles.push({ type: 'sky', x: W + 10, y, size: 32, label: '一', w: 32 });
+    // "一"：空中障碍，三种高度
+    const r2 = Math.random();
+    let yiY;
+    if (r2 < 0.35) {
+      // 必须跳过：贴近地面上方，站着会撞头
+      yiY = GROUND - PLAYER_H - 6;
+    } else if (r2 < 0.7) {
+      // 必须蹲过：腰部高度，跳起来反而撞，蹲下可过
+      yiY = GROUND - 55;
+    } else {
+      // 安全高空：飞得很高，不需要操作
+      yiY = GROUND - 130;
+    }
+    obstacles.push({
+      type: 'sky',
+      x: W + 10,
+      y: yiY,
+      size: 36,
+      label: '一',
+      w: 40,
+      h: 14  // "一"字实际高度很薄
+    });
   }
 }
 
-let nextSpawn = 80;
+let nextSpawn = 90;
 
+// ─── 玩家操作 ────────────────────────────────────────────────
 function jump() {
   if (!player.grounded) return;
-  player.vy = -13;
+  player.vy = -13.5;
   player.grounded = false;
 }
 
@@ -339,14 +374,15 @@ function handleJump() {
   else jump();
 }
 
+// ─── 游戏流程 ────────────────────────────────────────────────
 function startGame() {
   if (state === 'running') return;
   state = 'running';
   score = 0; frame = 0; speed = 5;
   obstacles = []; particles = [];
-  player.y = GROUND; player.vy = 0; player.grounded = true;
-  player.ducking = false;
-  nextSpawn = 80;
+  player.y = GROUND; player.vy = 0;
+  player.grounded = true; player.ducking = false;
+  nextSpawn = 90;
   document.getElementById('overlay').classList.add('hidden');
 }
 
@@ -362,7 +398,6 @@ function gameOver() {
     });
   }
   submitScore(playerName, score).then(loadLeaderboard);
-
   const ov = document.getElementById('overlay');
   ov.classList.remove('hidden');
   ov.innerHTML = `
@@ -372,21 +407,26 @@ function gameOver() {
   `;
 }
 
+// ─── 碰撞检测 ────────────────────────────────────────────────
 function collides(o) {
-  const pw = playerW();
-  const px1 = player.x - pw/2 + 8, px2 = player.x + pw/2 - 8;
-  const py2 = player.y;
-  const py1 = player.ducking ? player.y - player.duckFontSize : player.y - player.baseFontSize;
-  const ox1 = o.x - o.w/2 + 4, ox2 = o.x + o.w/2 - 4;
-  const oy2 = o.y;
-  const oy1 = o.y - o.size;
-  // 地面障碍蹲下也撞（蹲下躲不了黄玲）
-  if (o.type === 'ground') {
-    return px1 < ox2 && px2 > ox1 && py2 > oy1;
-  }
+  // 玩家碰撞箱
+  const pH = player.ducking ? PLAYER_DUCK_H : PLAYER_H;
+  const pW = player.ducking ? PLAYER_W - 10 : PLAYER_W;
+  const px1 = player.x - pW / 2 + 6;
+  const px2 = player.x + pW / 2 - 6;
+  const py1 = player.y - pH;   // 头顶
+  const py2 = player.y;        // 脚底（贴地面）
+
+  // 障碍物碰撞箱
+  const ox1 = o.x - o.w / 2 + 4;
+  const ox2 = o.x + o.w / 2 - 4;
+  const oy2 = o.y;             // 障碍物底部
+  const oy1 = o.y - o.h;      // 障碍物顶部
+
   return px1 < ox2 && px2 > ox1 && py1 < oy2 && py2 > oy1;
 }
 
+// ─── 更新 ────────────────────────────────────────────────────
 function update() {
   if (state !== 'running') return;
   frame++;
@@ -396,35 +436,36 @@ function update() {
 
   stars.forEach(s => { s.x -= speed * 0.15; if (s.x < 0) s.x = W; });
 
+  // 玩家物理
   player.wobble = Math.sin(frame * 0.35) * 3;
   if (!player.grounded) {
-    player.vy += 0.7;
+    player.vy += 0.75;
     player.y += player.vy;
     if (player.y >= GROUND) {
-      player.y = GROUND; player.vy = 0;
-      player.grounded = true;
+      player.y = GROUND; player.vy = 0; player.grounded = true;
     }
   }
 
+  // 生成障碍物
   nextSpawn--;
   if (nextSpawn <= 0) {
     spawnObstacle();
-    nextSpawn = Math.floor(60 + Math.random() * 80 - speed * 2);
-    nextSpawn = Math.max(nextSpawn, 40);
+    nextSpawn = Math.max(40, Math.floor(70 + Math.random() * 70 - speed * 1.5));
   }
   obstacles.forEach(o => { o.x -= speed; });
-  obstacles = obstacles.filter(o => o.x > -80);
+  obstacles = obstacles.filter(o => o.x > -100);
 
+  // 碰撞
   for (const o of obstacles) {
     if (collides(o)) { gameOver(); return; }
   }
 
-  particles.forEach(p => {
-    p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03;
-  });
+  // 粒子
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03; });
   particles = particles.filter(p => p.life > 0);
 }
 
+// ─── 绘制 ────────────────────────────────────────────────────
 function drawStars() {
   stars.forEach(s => {
     ctx.save();
@@ -451,7 +492,7 @@ function drawGround() {
 }
 
 function drawPlayer() {
-  const fs = player.ducking ? player.duckFontSize : player.baseFontSize;
+  const fs = player.ducking ? PLAYER_DUCK_FS : PLAYER_FS;
   ctx.save();
   ctx.font = `bold ${fs}px SimHei, 黑体, sans-serif`;
   ctx.textAlign = 'center';
@@ -460,7 +501,7 @@ function drawPlayer() {
   ctx.shadowBlur = 14;
   ctx.fillStyle = '#ffffff';
   const drawX = player.x + (state === 'running' ? player.wobble : 0);
-  ctx.fillText(player.label, drawX, player.y);
+  ctx.fillText('刘星', drawX, player.y);
   ctx.restore();
 }
 
@@ -482,7 +523,7 @@ function drawParticles() {
   particles.forEach(p => {
     ctx.save();
     ctx.globalAlpha = p.life;
-    ctx.font = `bold 18px SimHei`;
+    ctx.font = 'bold 18px SimHei';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#e879f9';
     ctx.fillText(p.char, p.x, p.y);
@@ -522,12 +563,9 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// ─── 键盘控制 ────────────────────────────────────────────────
+// ─── 键盘 ────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'ArrowUp') {
-    e.preventDefault();
-    handleJump();
-  }
+  if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); handleJump(); }
   if (e.code === 'ArrowDown') { e.preventDefault(); duck(true); }
 });
 document.addEventListener('keyup', e => {
@@ -545,7 +583,6 @@ document.getElementById('name-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('name-submit').click();
 });
 
-// ─── 启动 ────────────────────────────────────────────────────
 loadLeaderboard();
 loop();
 </script>
