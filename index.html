@@ -1,37 +1,36 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>刘星快跑</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-
 body{
-  background:linear-gradient(180deg,#1a0533,#7b3fa0);
-  height:100vh;
+  margin:0;
+  background:#1a0533;
+  color:#fff;
+  font-family:SimHei;
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
-  font-family:SimHei;
-  overflow:hidden;
 }
 
-#wrap{width:800px;max-width:100vw;}
-
 #top{
+  width:800px;
+  max-width:100vw;
   display:flex;
   justify-content:space-between;
   padding:10px;
-  color:#fff;
 }
 
 #game{
   position:relative;
+  width:800px;
+  max-width:100vw;
   height:220px;
-  border:2px solid rgba(255,255,255,.2);
+  border:1px solid rgba(255,255,255,.2);
+  overflow:hidden;
 }
 
 canvas{width:100%;height:100%;}
@@ -39,50 +38,29 @@ canvas{width:100%;height:100%;}
 #start{
   position:absolute;
   inset:0;
+  background:rgba(0,0,0,.6);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  background:rgba(0,0,0,.6);
 }
 
 #start input{
   padding:10px;
-  border:none;
-  border-radius:8px;
   text-align:center;
   margin-bottom:10px;
 }
 
-#start button{
-  padding:10px 20px;
-  border:none;
-  border-radius:8px;
-  background:#7c3aed;
-  color:#fff;
-}
-
-#lb{
-  margin-top:10px;
-  color:#fff;
-  background:rgba(255,255,255,.1);
-  padding:10px;
-  border-radius:10px;
-}
-
 button{
-  flex:1;
-  padding:20px;
+  padding:10px 20px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="wrap">
-
 <div id="top">
-<div>得分：<b id="score">0</b></div>
+<div>分数：<b id="score">0</b></div>
 <div>最高：<b id="best">0</b></div>
 </div>
 
@@ -90,28 +68,22 @@ button{
 <canvas id="c" width="800" height="220"></canvas>
 
 <div id="start">
-<h2 style="color:#fff;margin-bottom:10px;">刘星快跑</h2>
-<input id="name" placeholder="输入名字" maxlength="8"/>
+<h2>刘星快跑</h2>
+<input id="name" placeholder="输入名字" maxlength="8">
 <button onclick="startGame()">开始</button>
 </div>
 
 </div>
 
+<div style="width:800px;max-width:100vw;margin-top:10px">
+<h3>排行榜</h3>
 <div id="lb">加载中...</div>
-
-<div style="display:flex;margin-top:10px;">
-<button onclick="jump()">跳</button>
-<button onmousedown="duck(true)" onmouseup="duck(false)">蹲</button>
-</div>
-
 </div>
 
 <script>
 
-const SUPABASE_URL="https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
-
-let playerName="玩家";
+const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -126,8 +98,8 @@ async function submitScore(name,score){
 }
 
 async function loadLB(){
-  const r=await fetch(
-    SUPABASE_URL+"/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
+  const r = await fetch(
+    SUPABASE_URL + "/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
     {
       headers:{
         apikey:SUPABASE_KEY,
@@ -135,52 +107,117 @@ async function loadLB(){
       }
     }
   );
-  const d=await r.json();
+
+  const d = await r.json();
+
   document.getElementById("lb").innerHTML =
     d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
 }
 
-// ================= GAME =================
-const ctx=document.getElementById("c").getContext("2d");
-const W=800,H=220,G=180;
+// ================= 游戏核心 =================
 
-let state="idle",score=0,best=0,f=0,speed=5;
-let y=G,vy=0,ground=true,ducking=false;
-let obs=[],next=60;
+const ctx = document.getElementById("c").getContext("2d");
+
+const W = 800;
+const H = 220;
+const GROUND = 180;
+
+const GRAVITY = 0.6;
+const JUMP_V = -11;
+
+let state = "idle";
+let score = 0;
+let best = 0;
+let frame = 0;
+let speed = 6;
+
+let playerName = "玩家";
+
+let player = {
+  x:100,
+  y:GROUND,
+  vy:0,
+  w:60,
+  h:34,
+  grounded:true
+};
+
+let obs = [];
+let next = 60;
 
 function startGame(){
-  playerName=document.getElementById("name").value||"玩家";
-  state="run";
-  score=0;f=0;speed=5;obs=[];
-  y=G;vy=0;ground=true;
+  playerName = document.getElementById("name").value || "玩家";
+
+  state = "run";
+  score = 0;
+  frame = 0;
+  speed = 6;
+  obs = [];
+  next = 60;
+
+  player.y = GROUND;
+  player.vy = 0;
+  player.grounded = true;
+
   document.getElementById("start").style.display="none";
 }
 
 function jump(){
-  if(!ground)return;
-  vy=-12;
-  ground=false;
+  if(!player.grounded) return;
+  player.vy = JUMP_V;
+  player.grounded = false;
 }
 
-function duck(v){ducking=v;}
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space") jump();
+});
 
 function spawn(){
-  if(Math.random()<0.6){
-    obs.push({x:W,y:G,w:30,h:30,t:"A"});
+  if(Math.random()<0.65){
+    obs.push({
+      x:W,
+      y:GROUND,
+      w:50,
+      h:34,
+      text:"黄玲",
+      type:"ground"
+    });
   }else{
-    obs.push({x:W,y:G-60,w:40,h:10,t:"B"});
+    obs.push({
+      x:W,
+      y:GROUND-60,
+      w:50,
+      h:30,
+      text:"黄玲",
+      type:"air"
+    });
   }
 }
 
-function hit(o){
-  return Math.abs(o.x-100)<30 &&
-  y > o.y - o.h;
+function collide(o){
+
+  const px1 = player.x - player.w/2;
+  const px2 = player.x + player.w/2;
+  const py1 = player.y - player.h;
+  const py2 = player.y;
+
+  const ox1 = o.x - o.w/2;
+  const ox2 = o.x + o.w/2;
+  const oy1 = o.y - o.h;
+  const oy2 = o.y;
+
+  return px1 < ox2 &&
+         px2 > ox1 &&
+         py1 < oy2 &&
+         py2 > oy1;
 }
 
-function over(){
-  state="dead";
-  best=Math.max(best,score);
-  document.getElementById("best").textContent=best;
+function gameOver(){
+
+  state = "dead";
+
+  best = Math.max(best,score);
+  document.getElementById("best").textContent = best;
 
   submitScore(playerName,score).then(loadLB);
 
@@ -188,42 +225,69 @@ function over(){
 }
 
 function update(){
-  if(state!=="run")return;
 
-  f++;
-  score=Math.floor(f/6);
-  document.getElementById("score").textContent=score;
+  if(state!=="run") return;
 
-  if(!ground){
-    vy+=0.7;
-    y+=vy;
-    if(y>=G){y=G;vy=0;ground=true;}
+  frame++;
+  score = Math.floor(frame/6);
+  document.getElementById("score").textContent = score;
+
+  speed = 6 + score*0.003;
+  if(speed > 18) speed = 18;
+
+  // 重力
+  if(!player.grounded){
+    player.vy += GRAVITY;
+    player.y += player.vy;
+
+    if(player.y >= GROUND){
+      player.y = GROUND;
+      player.vy = 0;
+      player.grounded = true;
+    }
   }
 
+  // 生成
   next--;
   if(next<=0){
     spawn();
-    next=60+Math.random()*60;
+    next = 60 + Math.random()*60;
   }
 
-  obs.forEach(o=>o.x-=speed);
-  obs=obs.filter(o=>o.x>-50);
+  // 移动障碍
+  obs.forEach(o=>o.x -= speed);
+  obs = obs.filter(o=>o.x>-100);
 
+  // 碰撞
   for(let o of obs){
-    if(hit(o)){over();return;}
+    if(collide(o)){
+      gameOver();
+      return;
+    }
   }
 }
 
 function draw(){
+
   ctx.clearRect(0,0,W,H);
+
+  // 背景
   ctx.fillStyle="#1a0533";
   ctx.fillRect(0,0,W,H);
 
+  // 玩家 刘星
+  ctx.font="36px SimHei";
+  ctx.textAlign="center";
+  ctx.textBaseline="bottom";
   ctx.fillStyle="#fff";
-  ctx.fillText("刘星",100,y);
+  ctx.fillText("刘星",player.x,player.y);
+
+  // 障碍 黄玲
+  ctx.font="32px SimHei";
+  ctx.fillStyle="#fda4af";
 
   obs.forEach(o=>{
-    ctx.fillText(o.t,o.x,o.y);
+    ctx.fillText(o.text,o.x,o.y);
   });
 }
 
@@ -232,11 +296,8 @@ function loop(){
   draw();
   requestAnimationFrame(loop);
 }
-loop();
 
-document.addEventListener("keydown",e=>{
-  if(e.code==="Space")jump();
-});
+loop();
 
 loadLB();
 
