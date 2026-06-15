@@ -43,6 +43,36 @@ body {
   justify-content:center;
   background:rgba(10,0,20,.55);
   color:#f0e0ff;
+  z-index:10;
+}
+
+#start-panel {
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(10,0,20,.75);
+  z-index:20;
+}
+
+#start-panel input {
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  text-align:center;
+  margin-bottom:10px;
+  width:160px;
+}
+
+#start-panel button {
+  padding:10px 20px;
+  border-radius:10px;
+  border:none;
+  background:#7c3aed;
+  color:#fff;
+  font-size:16px;
 }
 
 #leaderboard {
@@ -74,21 +104,26 @@ body {
 <span>得分：<b id="score">0</b></span>
 <span>最高：<b id="best">0</b></span>
 </div><div id="game-canvas-wrap">
-<canvas id="game-canvas" width="800" height="220"></canvas>
-<div id="overlay">
+<canvas id="game-canvas" width="800" height="220"></canvas><div id="overlay">
 <div class="title">刘星快跑</div>
-<div class="hint">点击开始</div>
-</div>
-</div><div id="leaderboard">
+<div class="hint">游戏中</div>
+</div><div id="start-panel">
+<h2 style="color:#fff;margin-bottom:10px;">刘星快跑</h2>
+<input id="name-input" maxlength="8" placeholder="输入名字">
+<button id="start-btn">开始游戏</button>
+</div></div><div id="leaderboard">
 <h3>🏆 排行榜</h3>
 <div id="lb-list">加载中...</div>
 </div></div><div id="controls">
 <button id="btn-duck">蹲下</button>
 <button id="btn-jump">跳跃</button>
 </div><script>
+
 // ================= SUPABASE =================
 const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
+const SUPABASE_KEY = "YOUR_ANON_KEY";
+
+let playerName = "玩家";
 
 async function submitScore(name, score) {
   await fetch(SUPABASE_URL + "/rest/v1/leaderboard", {
@@ -114,6 +149,7 @@ async function loadLeaderboard() {
   );
 
   const data = await res.json();
+
   document.getElementById("lb-list").innerHTML =
     data.map((r,i)=>`<div>${i+1}. ${r.name} - ${r.score}</div>`).join("");
 }
@@ -125,30 +161,17 @@ const ctx=canvas.getContext("2d");
 const W=800,H=220;
 const GROUND=H-40;
 
-let PLAYER_W=60;
-ctx.font="bold 36px SimHei";
-PLAYER_W=ctx.measureText("刘星").width;
-
-const PLAYER_H=34;
-const PLAYER_DUCK_H=18;
-
 let state="idle",score=0,bestScore=0,frame=0,speed=5;
 
 const player={x:100,y:GROUND,vy:0,grounded:true,ducking:false};
 let obstacles=[];
-
-let stars=Array.from({length:60},()=>({
-x:Math.random()*W,
-y:Math.random()*(GROUND-40),
-r:Math.random()*1.5
-}));
 
 function spawnObstacle(){
 if(Math.random()<0.6){
 obstacles.push({type:"ground",x:W,y:GROUND,size:32,label:"黄玲",w:28,h:32});
 }else{
 let r=Math.random();
-let y=r<0.33?GROUND-36-6:r<0.66?GROUND-55:GROUND-120;
+let y=r<0.33?GROUND-40:r<0.66?GROUND-55:GROUND-120;
 obstacles.push({type:"sky",x:W,y:y,size:36,label:"一",w:40,h:22});
 }
 }
@@ -166,6 +189,7 @@ function duck(on){player.ducking=on;}
 function startGame(){
 state="running";
 score=0;frame=0;speed=5;obstacles=[];
+document.getElementById("start-panel").style.display="none";
 document.getElementById("overlay").style.display="none";
 }
 
@@ -174,18 +198,17 @@ state="dead";
 bestScore=Math.max(bestScore,score);
 document.getElementById("best").textContent=bestScore;
 
-submitScore("玩家",score).then(loadLeaderboard);
+submitScore(playerName,score).then(loadLeaderboard);
 
-const ov=document.getElementById("overlay");
-ov.style.display="flex";
-ov.querySelector(".title").textContent="游戏结束";
-ov.querySelector(".hint").textContent="点击重新开始";
+document.getElementById("overlay").style.display="flex";
+document.querySelector("#overlay .title").textContent="游戏结束";
+document.querySelector("#overlay .hint").textContent="点击开始重新";
 }
 
 function collides(o){
-const pH=player.ducking?PLAYER_DUCK_H:PLAYER_H;
-const px1=player.x-PLAYER_W/2;
-const px2=player.x+PLAYER_W/2;
+const pH=player.ducking?18:34;
+const px1=player.x-30;
+const px2=player.x+30;
 const py1=player.y-pH+(player.ducking?10:0);
 const py2=player.y;
 
@@ -205,11 +228,6 @@ score=Math.floor(frame/6);
 document.getElementById("score").textContent=score;
 
 speed=5+score*0.003;
-
-stars.forEach(s=>{
-s.x-=speed*0.2;
-if(s.x<0){s.x=W;s.y=Math.random()*(GROUND-40);}
-});
 
 if(!player.grounded){
 player.vy+=0.7;
@@ -241,22 +259,12 @@ ctx.clearRect(0,0,W,H);
 ctx.fillStyle="#1a0533";
 ctx.fillRect(0,0,W,H);
 
-stars.forEach(s=>{
-ctx.beginPath();
-ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
 ctx.fillStyle="#fff";
-ctx.fill();
-});
-
-ctx.fillStyle="#aaa";
-ctx.fillRect(0,GROUND,W,2);
-
-ctx.font="bold 36px SimHei";
-ctx.fillStyle="#fff";
-ctx.fillText("刘星",player.x-20,player.y);
+ctx.font="36px SimHei";
+ctx.fillText("刘星",player.x,player.y);
 
 obstacles.forEach(o=>{
-ctx.font=`bold ${o.size}px SimHei`;
+ctx.font=`${o.size}px SimHei`;
 ctx.fillStyle=o.type==="sky"?"#fde68a":"#fda4af";
 ctx.fillText(o.label,o.x,o.y);
 });
@@ -270,12 +278,17 @@ requestAnimationFrame(loop);
 loop();
 
 // ================= CONTROLS =================
+document.getElementById("start-btn").onclick=()=>{
+playerName=document.getElementById("name-input").value||"玩家";
+startGame();
+};
+
 const isTouch="ontouchstart"in window;
 
 document.getElementById("btn-jump")
 .addEventListener(isTouch?"touchstart":"mousedown",()=>{
-if(state!=="running")startGame();
-else jump();
+if(state!=="running")return;
+jump();
 });
 
 document.getElementById("btn-duck")
@@ -286,5 +299,6 @@ document.getElementById("btn-duck")
 
 // init
 loadLeaderboard();
+
 </script></body>
 </html>
