@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刘星快跑终极版</title>
+<title>刘星快跑 完整版</title>
 
 <style>
 body{
   margin:0;
   background:#1a0533;
   font-family:SimHei;
+  color:#fff;
   display:flex;
   flex-direction:column;
   align-items:center;
-  color:#fff;
 }
 
 #top{
@@ -27,7 +27,6 @@ body{
 #game{
   position:relative;
   width:800px;
-  max-width:100vw;
   height:220px;
   border:1px solid rgba(255,255,255,.2);
   overflow:hidden;
@@ -46,14 +45,13 @@ canvas{width:100%;height:100%;}
   gap:10px;
 }
 
-#start input{
+input{
   padding:10px;
   text-align:center;
 }
 
 button{
   padding:10px 18px;
-  margin:5px;
   border:none;
   border-radius:8px;
   background:#7c3aed;
@@ -80,7 +78,7 @@ button{
 </div>
 
 <div style="width:800px;max-width:100vw;margin-top:10px">
-<h3>排行榜</h3>
+<h3>🏆 排行榜</h3>
 <div id="lb">加载中...</div>
 </div>
 
@@ -94,12 +92,13 @@ button{
 
 <script>
 
-const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
+// ================= SUPABASE =================
 
-// ================= Supabase =================
+const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // 👈 改这里
 
 async function submitScore(name,score){
+
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
     method:"POST",
     headers:{
@@ -112,6 +111,7 @@ async function submitScore(name,score){
 }
 
 async function loadLB(){
+
   const r = await fetch(
     SUPABASE_URL+"/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
     {
@@ -123,13 +123,14 @@ async function loadLB(){
   );
 
   const d = await r.json();
+
   document.getElementById("lb").innerHTML =
     d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
 }
 
-// ================= 游戏核心 =================
+// ================= GAME =================
 
-const ctx = document.getElementById("c").getContext("2d");
+const ctx=document.getElementById("c").getContext("2d");
 
 const W=800;
 const GROUND=180;
@@ -139,7 +140,6 @@ const JUMP_V=-11;
 
 let state="idle";
 let score=0,best=0,frame=0,speed=6;
-let playerName="玩家";
 
 let ducking=false;
 
@@ -154,10 +154,12 @@ let player={
 
 let obs=[];
 let next=60;
+let playerName="玩家";
 
-// ================= 控制 =================
+// ================= START =================
 
 function startGame(){
+
   playerName=document.getElementById("name").value||"玩家";
 
   state="run";
@@ -174,6 +176,8 @@ function startGame(){
   document.getElementById("start").style.display="none";
 }
 
+// ================= INPUT =================
+
 function jump(){
   if(!player.grounded) return;
   player.vy=JUMP_V;
@@ -184,57 +188,65 @@ function duck(v){
   ducking=v;
 }
 
-document.addEventListener("keydown",e=>{
-  if(e.code==="Space") jump();
-});
-
-// ================= 生成 =================
+// ================= SPAWN（机制版） =================
 
 function spawn(){
-  if(Math.random()<0.65){
+
+  const r=Math.random();
+
+  // 🟥 上下结构（必须跳）
+  if(r<0.35){
     obs.push({
       x:W,
+      type:"stack",
       y:GROUND,
       w:50,
-      h:34,
-      text:"黄玲"
+      h:50
     });
-  }else{
-    obs.push({
-      x:W,
-      y:GROUND-60,
-      w:50,
-      h:30,
-      text:"黄玲"
-    });
+    return;
   }
+
+  // 🟨 Dino三态（跳 / 蹲 / 无操作）
+  const mode=Math.random();
+  let y;
+
+  if(mode<0.33) y=GROUND;        // 跳
+  else if(mode<0.66) y=GROUND-60; // 蹲
+  else y=GROUND-120;             // 无操作
+
+  obs.push({
+    x:W,
+    type:"single",
+    y,
+    w:50,
+    h:34
+  });
 }
 
-// ================= 碰撞 =================
+// ================= COLLISION =================
+
+function getPH(){
+  return ducking?20:34;
+}
 
 function collide(o){
 
-  const ph = ducking ? 20 : player.h;
+  const px1=player.x-player.w/2;
+  const px2=player.x+player.w/2;
+  const py1=player.y-getPH();
+  const py2=player.y;
 
-  const px1 = player.x - player.w/2;
-  const px2 = player.x + player.w/2;
-  const py1 = player.y - ph;
-  const py2 = player.y;
+  const ox1=o.x-o.w/2;
+  const ox2=o.x+o.w/2;
+  const oy1=o.y-o.h;
+  const oy2=o.y;
 
-  const ox1 = o.x - o.w/2;
-  const ox2 = o.x + o.w/2;
-  const oy1 = o.y - o.h;
-  const oy2 = o.y;
-
-  return px1 < ox2 &&
-         px2 > ox1 &&
-         py1 < oy2 &&
-         py2 > oy1;
+  return px1<ox2&&px2>ox1&&py1<oy2&&py2>oy1;
 }
 
-// ================= 游戏结束 =================
+// ================= GAME OVER =================
 
-function gameOver(){
+function over(){
 
   state="dead";
 
@@ -246,7 +258,7 @@ function gameOver(){
   document.getElementById("start").style.display="flex";
 }
 
-// ================= 更新 =================
+// ================= UPDATE =================
 
 function update(){
 
@@ -259,7 +271,7 @@ function update(){
   speed=6+score*0.003;
   if(speed>18) speed=18;
 
-  // 重力
+  // physics
   if(!player.grounded){
     player.vy+=GRAVITY;
     player.y+=player.vy;
@@ -271,52 +283,67 @@ function update(){
     }
   }
 
-  // 生成
+  // spawn
   next--;
   if(next<=0){
     spawn();
     next=60+Math.random()*60;
   }
 
-  // 移动
+  // move
   obs.forEach(o=>o.x-=speed);
   obs=obs.filter(o=>o.x>-100);
 
-  // 碰撞
+  // collision
   for(let o of obs){
     if(collide(o)){
-      gameOver();
+      over();
       return;
     }
   }
 }
 
-// ================= 绘制 =================
+// ================= DRAW =================
 
 function draw(){
 
   ctx.clearRect(0,0,W,220);
 
+  // background
   ctx.fillStyle="#1a0533";
   ctx.fillRect(0,0,W,220);
 
-  // 玩家 刘星
+  // ground
+  ctx.strokeStyle="rgba(255,255,255,0.2)";
+  ctx.beginPath();
+  ctx.moveTo(0,GROUND);
+  ctx.lineTo(W,GROUND);
+  ctx.stroke();
+
+  // player 刘星
   ctx.font="36px SimHei";
   ctx.textAlign="center";
   ctx.textBaseline="bottom";
   ctx.fillStyle="#fff";
   ctx.fillText("刘星",player.x,player.y);
 
-  // 障碍 黄玲
-  ctx.font="32px SimHei";
-  ctx.fillStyle="#fda4af";
+  // obstacles 黄玲
+  ctx.font="28px SimHei";
 
   obs.forEach(o=>{
-    ctx.fillText(o.text,o.x,o.y);
+
+    if(o.type==="stack"){
+      ctx.fillStyle="#fda4af";
+      ctx.fillText("黄",o.x,o.y-25);
+      ctx.fillText("玲",o.x,o.y);
+    }else{
+      ctx.fillStyle="#fbbf24";
+      ctx.fillText("黄玲",o.x,o.y);
+    }
   });
 }
 
-// ================= 主循环 =================
+// ================= LOOP =================
 
 function loop(){
   update();
