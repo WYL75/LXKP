@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刘星快跑 稳定完整版</title>
+<title>刘星快跑 FINAL</title>
 
 <style>
 body{
@@ -93,9 +93,8 @@ button{
 <script>
 
 // ================= SUPABASE =================
-
 const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // 👈 改这里
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // ← 改这里
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -190,7 +189,7 @@ function spawn(){
 
   const r=Math.random();
 
-  // 🟥 上下结构（必须跳）
+  // 上下结构（必须跳）
   if(r<0.35){
     obs.push({
       x:W,
@@ -202,7 +201,7 @@ function spawn(){
     return;
   }
 
-  // 🟨 三态结构
+  // 三态结构（Dino）
   const mode=Math.random();
   let y;
 
@@ -243,7 +242,6 @@ function collide(o){
 // ================= GAME OVER =================
 
 function over(){
-
   state="dead";
 
   best=Math.max(best,score);
@@ -265,7 +263,7 @@ function update(){
   document.getElementById("score").textContent=score;
 
   speed=6+score*0.003;
-  if(speed>18)speed=18;
+  if(speed>18) speed=18;
 
   // physics
   if(!player.grounded){
@@ -309,32 +307,34 @@ function draw(){
   ctx.fillStyle="#1a0533";
   ctx.fillRect(0,0,W,220);
 
-  // ground line
+  // ground
   ctx.strokeStyle="rgba(255,255,255,0.2)";
   ctx.beginPath();
   ctx.moveTo(0,GROUND);
   ctx.lineTo(W,GROUND);
   ctx.stroke();
 
-  // ================= 刘星（绝对稳定） =================
+  // ================= 刘星（彻底修复版） =================
   ctx.save();
   ctx.font="bold 36px SimHei";
   ctx.textAlign="center";
-  ctx.textBaseline="bottom";
+  ctx.textBaseline="middle";
+
   ctx.fillStyle="#fff";
   ctx.shadowColor="#e879f9";
-  ctx.shadowBlur=10;
+  ctx.shadowBlur=12;
 
-  let py = player.y;
-  if(!py || isNaN(py)) py = GROUND;
+  // 强制安全y（避免任何异常）
+  let y = player.y;
+  if(!y || isNaN(y)) y = GROUND;
 
-  ctx.fillText("刘星",player.x,py);
+  ctx.fillText("刘星", player.x, y - 18);
   ctx.restore();
 
   // ================= 黄玲 =================
   ctx.font="28px SimHei";
-  obs.forEach(o=>{
 
+  obs.forEach(o=>{
     if(o.type==="stack"){
       ctx.fillStyle="#fda4af";
       ctx.fillText("黄",o.x,o.y-25);
