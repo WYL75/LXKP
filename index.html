@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刘星快跑 FINAL</title>
+<title>刘星快跑 FIX</title>
 
 <style>
 body{
@@ -32,7 +32,10 @@ body{
   overflow:hidden;
 }
 
-canvas{width:100%;height:100%;}
+canvas{
+  width:800px;
+  height:220px;
+}
 
 #start{
   position:absolute;
@@ -77,12 +80,12 @@ button{
 </div>
 </div>
 
-<div style="width:800px;max-width:100vw;margin-top:10px">
+<div style="width:800px;margin-top:10px">
 <h3>排行榜</h3>
 <div id="lb">加载中...</div>
 </div>
 
-<div style="width:800px;max-width:100vw;display:flex;gap:10px;margin-top:10px">
+<div style="width:800px;margin-top:10px;display:flex;gap:10px">
 <button onclick="jump()">跳跃</button>
 <button ontouchstart="duck(true)" ontouchend="duck(false)"
         onmousedown="duck(true)" onmouseup="duck(false)">
@@ -94,7 +97,7 @@ button{
 
 // ================= SUPABASE =================
 const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // ← 改这里
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -126,20 +129,20 @@ async function loadLB(){
 
 // ================= GAME =================
 
-const ctx=document.getElementById("c").getContext("2d");
+const ctx = document.getElementById("c").getContext("2d");
 
-const W=800;
-const GROUND=180;
+const W = 800;
+const GROUND = 180;
 
-const GRAVITY=0.6;
-const JUMP_V=-11;
+const GRAVITY = 0.6;
+const JUMP_V = -11;
 
-let state="idle";
-let score=0,best=0,frame=0,speed=6;
+let state = "idle";
+let score = 0, best = 0, frame = 0, speed = 6;
 
-let ducking=false;
+let ducking = false;
 
-let player={
+let player = {
   x:100,
   y:GROUND,
   vy:0,
@@ -148,49 +151,48 @@ let player={
   grounded:true
 };
 
-let obs=[];
-let next=60;
-let playerName="玩家";
+let obs = [];
+let next = 60;
+let playerName = "玩家";
 
 // ================= START =================
 
 function startGame(){
-  playerName=document.getElementById("name").value||"玩家";
+  playerName = document.getElementById("name").value || "玩家";
 
-  state="run";
-  score=0;
-  frame=0;
-  speed=6;
-  obs=[];
-  next=60;
+  state = "run";
+  score = 0;
+  frame = 0;
+  speed = 6;
+  obs = [];
+  next = 60;
 
-  player.y=GROUND;
-  player.vy=0;
-  player.grounded=true;
+  player.y = GROUND;
+  player.vy = 0;
+  player.grounded = true;
 
-  document.getElementById("start").style.display="none";
+  document.getElementById("start").style.display = "none";
 }
 
 // ================= INPUT =================
 
 function jump(){
   if(!player.grounded) return;
-  player.vy=JUMP_V;
-  player.grounded=false;
+  player.vy = JUMP_V;
+  player.grounded = false;
 }
 
 function duck(v){
-  ducking=v;
+  ducking = v;
 }
 
 // ================= SPAWN =================
 
 function spawn(){
 
-  const r=Math.random();
+  const r = Math.random();
 
-  // 上下结构（必须跳）
-  if(r<0.35){
+  if(r < 0.35){
     obs.push({
       x:W,
       type:"stack",
@@ -201,13 +203,12 @@ function spawn(){
     return;
   }
 
-  // 三态结构（Dino）
-  const mode=Math.random();
+  const mode = Math.random();
   let y;
 
-  if(mode<0.33) y=GROUND;
-  else if(mode<0.66) y=GROUND-60;
-  else y=GROUND-120;
+  if(mode < 0.33) y = GROUND;
+  else if(mode < 0.66) y = GROUND - 60;
+  else y = GROUND - 120;
 
   obs.push({
     x:W,
@@ -221,74 +222,70 @@ function spawn(){
 // ================= COLLISION =================
 
 function getPH(){
-  return ducking?20:34;
+  return ducking ? 20 : 34;
 }
 
 function collide(o){
 
-  const px1=player.x-player.w/2;
-  const px2=player.x+player.w/2;
-  const py1=player.y-getPH();
-  const py2=player.y;
+  const px1 = player.x - player.w/2;
+  const px2 = player.x + player.w/2;
+  const py1 = player.y - getPH();
+  const py2 = player.y;
 
-  const ox1=o.x-o.w/2;
-  const ox2=o.x+o.w/2;
-  const oy1=o.y-o.h;
-  const oy2=o.y;
+  const ox1 = o.x - o.w/2;
+  const ox2 = o.x + o.w/2;
+  const oy1 = o.y - o.h;
+  const oy2 = o.y;
 
-  return px1<ox2&&px2>ox1&&py1<oy2&&py2>oy1;
+  return px1 < ox2 && px2 > ox1 && py1 < oy2 && py2 > oy1;
 }
 
 // ================= GAME OVER =================
 
 function over(){
-  state="dead";
+  state = "dead";
 
-  best=Math.max(best,score);
-  document.getElementById("best").textContent=best;
+  best = Math.max(best,score);
+  document.getElementById("best").textContent = best;
 
   submitScore(playerName,score).then(loadLB);
 
-  document.getElementById("start").style.display="flex";
+  document.getElementById("start").style.display = "flex";
 }
 
 // ================= UPDATE =================
 
 function update(){
 
-  if(state!=="run") return;
+  if(state !== "run") return;
 
   frame++;
-  score=Math.floor(frame/6);
-  document.getElementById("score").textContent=score;
+  score = Math.floor(frame/6);
+  document.getElementById("score").textContent = score;
 
-  speed=6+score*0.003;
-  if(speed>18) speed=18;
+  speed = 6 + score * 0.003;
+  if(speed > 18) speed = 18;
 
-  // physics
   if(!player.grounded){
-    player.vy+=GRAVITY;
-    player.y+=player.vy;
+    player.vy += GRAVITY;
+    player.y += player.vy;
 
-    if(player.y>=GROUND){
-      player.y=GROUND;
-      player.vy=0;
-      player.grounded=true;
+    if(player.y >= GROUND){
+      player.y = GROUND;
+      player.vy = 0;
+      player.grounded = true;
     }
   }
 
-  // spawn
   next--;
-  if(next<=0){
+  if(next <= 0){
     spawn();
-    next=60+Math.random()*60;
+    next = 60 + Math.random()*60;
   }
 
-  // move
-  obs.forEach(o=>o.x-=speed);
-  obs=obs.filter(o=>o.x>-100);
+  obs.forEach(o => o.x -= speed);
+  obs = obs.filter(o => o.x > -100);
 
-  // collision
   for(let o of obs){
     if(collide(o)){
       over();
@@ -303,45 +300,46 @@ function draw(){
 
   ctx.clearRect(0,0,W,220);
 
-  // background
-  ctx.fillStyle="#1a0533";
+  ctx.fillStyle = "#1a0533";
   ctx.fillRect(0,0,W,220);
 
-  // ground
-  ctx.strokeStyle="rgba(255,255,255,0.2)";
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
   ctx.beginPath();
   ctx.moveTo(0,GROUND);
   ctx.lineTo(W,GROUND);
   ctx.stroke();
 
-  // ================= 刘星（彻底修复版） =================
+  // ================= 刘星（绝对可见版本） =================
   ctx.save();
-  ctx.font="bold 36px SimHei";
-  ctx.textAlign="center";
-  ctx.textBaseline="middle";
 
-  ctx.fillStyle="#fff";
-  ctx.shadowColor="#e879f9";
-  ctx.shadowBlur=12;
+  ctx.font = "bold 36px SimHei";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
 
-  // 强制安全y（避免任何异常）
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "#e879f9";
+  ctx.shadowBlur = 12;
+
+  // 🔥关键修复：强制安全坐标
   let y = player.y;
   if(!y || isNaN(y)) y = GROUND;
 
-  ctx.fillText("刘星", player.x, y - 18);
+  // 🔥不再做奇怪偏移
+  ctx.fillText("刘星", player.x, y);
+
   ctx.restore();
 
   // ================= 黄玲 =================
-  ctx.font="28px SimHei";
+  ctx.font = "28px SimHei";
 
-  obs.forEach(o=>{
-    if(o.type==="stack"){
-      ctx.fillStyle="#fda4af";
-      ctx.fillText("黄",o.x,o.y-25);
-      ctx.fillText("玲",o.x,o.y);
-    }else{
-      ctx.fillStyle="#fbbf24";
-      ctx.fillText("黄玲",o.x,o.y);
+  obs.forEach(o => {
+    if(o.type === "stack"){
+      ctx.fillStyle = "#fda4af";
+      ctx.fillText("黄", o.x, o.y - 25);
+      ctx.fillText("玲", o.x, o.y);
+    } else {
+      ctx.fillStyle = "#fbbf24";
+      ctx.fillText("黄玲", o.x, o.y);
     }
   });
 }
