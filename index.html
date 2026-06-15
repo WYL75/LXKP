@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刘星快跑</title>
+<title>刘星快跑终极版</title>
 
 <style>
 body{
   margin:0;
   background:#1a0533;
-  color:#fff;
   font-family:SimHei;
   display:flex;
   flex-direction:column;
   align-items:center;
+  color:#fff;
 }
 
 #top{
@@ -38,21 +38,26 @@ canvas{width:100%;height:100%;}
 #start{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,.6);
+  background:rgba(0,0,0,.65);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:10px;
 }
 
 #start input{
   padding:10px;
   text-align:center;
-  margin-bottom:10px;
 }
 
 button{
-  padding:10px 20px;
+  padding:10px 18px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  background:#7c3aed;
+  color:#fff;
 }
 </style>
 </head>
@@ -70,9 +75,8 @@ button{
 <div id="start">
 <h2>刘星快跑</h2>
 <input id="name" placeholder="输入名字" maxlength="8">
-<button onclick="startGame()">开始</button>
+<button onclick="startGame()">开始游戏</button>
 </div>
-
 </div>
 
 <div style="width:800px;max-width:100vw;margin-top:10px">
@@ -80,10 +84,20 @@ button{
 <div id="lb">加载中...</div>
 </div>
 
+<div style="width:800px;max-width:100vw;display:flex;gap:10px;margin-top:10px">
+<button onclick="jump()">跳跃</button>
+<button ontouchstart="duck(true)" ontouchend="duck(false)"
+        onmousedown="duck(true)" onmouseup="duck(false)">
+蹲下
+</button>
+</div>
+
 <script>
 
 const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
+
+// ================= Supabase =================
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -99,7 +113,7 @@ async function submitScore(name,score){
 
 async function loadLB(){
   const r = await fetch(
-    SUPABASE_URL + "/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
+    SUPABASE_URL+"/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
     {
       headers:{
         apikey:SUPABASE_KEY,
@@ -109,7 +123,6 @@ async function loadLB(){
   );
 
   const d = await r.json();
-
   document.getElementById("lb").innerHTML =
     d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
 }
@@ -118,22 +131,19 @@ async function loadLB(){
 
 const ctx = document.getElementById("c").getContext("2d");
 
-const W = 800;
-const H = 220;
-const GROUND = 180;
+const W=800;
+const GROUND=180;
 
-const GRAVITY = 0.6;
-const JUMP_V = -11;
+const GRAVITY=0.6;
+const JUMP_V=-11;
 
-let state = "idle";
-let score = 0;
-let best = 0;
-let frame = 0;
-let speed = 6;
+let state="idle";
+let score=0,best=0,frame=0,speed=6;
+let playerName="玩家";
 
-let playerName = "玩家";
+let ducking=false;
 
-let player = {
+let player={
   x:100,
   y:GROUND,
   vy:0,
@@ -142,35 +152,43 @@ let player = {
   grounded:true
 };
 
-let obs = [];
-let next = 60;
+let obs=[];
+let next=60;
+
+// ================= 控制 =================
 
 function startGame(){
-  playerName = document.getElementById("name").value || "玩家";
+  playerName=document.getElementById("name").value||"玩家";
 
-  state = "run";
-  score = 0;
-  frame = 0;
-  speed = 6;
-  obs = [];
-  next = 60;
+  state="run";
+  score=0;
+  frame=0;
+  speed=6;
+  obs=[];
+  next=60;
 
-  player.y = GROUND;
-  player.vy = 0;
-  player.grounded = true;
+  player.y=GROUND;
+  player.vy=0;
+  player.grounded=true;
 
   document.getElementById("start").style.display="none";
 }
 
 function jump(){
   if(!player.grounded) return;
-  player.vy = JUMP_V;
-  player.grounded = false;
+  player.vy=JUMP_V;
+  player.grounded=false;
+}
+
+function duck(v){
+  ducking=v;
 }
 
 document.addEventListener("keydown",e=>{
   if(e.code==="Space") jump();
 });
+
+// ================= 生成 =================
 
 function spawn(){
   if(Math.random()<0.65){
@@ -179,8 +197,7 @@ function spawn(){
       y:GROUND,
       w:50,
       h:34,
-      text:"黄玲",
-      type:"ground"
+      text:"黄玲"
     });
   }else{
     obs.push({
@@ -188,17 +205,20 @@ function spawn(){
       y:GROUND-60,
       w:50,
       h:30,
-      text:"黄玲",
-      type:"air"
+      text:"黄玲"
     });
   }
 }
 
+// ================= 碰撞 =================
+
 function collide(o){
+
+  const ph = ducking ? 20 : player.h;
 
   const px1 = player.x - player.w/2;
   const px2 = player.x + player.w/2;
-  const py1 = player.y - player.h;
+  const py1 = player.y - ph;
   const py2 = player.y;
 
   const ox1 = o.x - o.w/2;
@@ -212,38 +232,42 @@ function collide(o){
          py2 > oy1;
 }
 
+// ================= 游戏结束 =================
+
 function gameOver(){
 
-  state = "dead";
+  state="dead";
 
-  best = Math.max(best,score);
-  document.getElementById("best").textContent = best;
+  best=Math.max(best,score);
+  document.getElementById("best").textContent=best;
 
   submitScore(playerName,score).then(loadLB);
 
   document.getElementById("start").style.display="flex";
 }
 
+// ================= 更新 =================
+
 function update(){
 
   if(state!=="run") return;
 
   frame++;
-  score = Math.floor(frame/6);
-  document.getElementById("score").textContent = score;
+  score=Math.floor(frame/6);
+  document.getElementById("score").textContent=score;
 
-  speed = 6 + score*0.003;
-  if(speed > 18) speed = 18;
+  speed=6+score*0.003;
+  if(speed>18) speed=18;
 
   // 重力
   if(!player.grounded){
-    player.vy += GRAVITY;
-    player.y += player.vy;
+    player.vy+=GRAVITY;
+    player.y+=player.vy;
 
-    if(player.y >= GROUND){
-      player.y = GROUND;
-      player.vy = 0;
-      player.grounded = true;
+    if(player.y>=GROUND){
+      player.y=GROUND;
+      player.vy=0;
+      player.grounded=true;
     }
   }
 
@@ -251,12 +275,12 @@ function update(){
   next--;
   if(next<=0){
     spawn();
-    next = 60 + Math.random()*60;
+    next=60+Math.random()*60;
   }
 
-  // 移动障碍
-  obs.forEach(o=>o.x -= speed);
-  obs = obs.filter(o=>o.x>-100);
+  // 移动
+  obs.forEach(o=>o.x-=speed);
+  obs=obs.filter(o=>o.x>-100);
 
   // 碰撞
   for(let o of obs){
@@ -267,13 +291,14 @@ function update(){
   }
 }
 
+// ================= 绘制 =================
+
 function draw(){
 
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0,0,W,220);
 
-  // 背景
   ctx.fillStyle="#1a0533";
-  ctx.fillRect(0,0,W,H);
+  ctx.fillRect(0,0,W,220);
 
   // 玩家 刘星
   ctx.font="36px SimHei";
@@ -290,6 +315,8 @@ function draw(){
     ctx.fillText(o.text,o.x,o.y);
   });
 }
+
+// ================= 主循环 =================
 
 function loop(){
   update();
