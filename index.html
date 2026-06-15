@@ -1,590 +1,230 @@
-<!DOCTYPE html>
-<html lang="zh">
+<!DOCTYPE html><html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刘星快跑</title>
+<title>刘星快跑（修复版）</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: linear-gradient(180deg, #1a0533 0%, #3d1a6e 40%, #7b3fa0 70%, #c97fd4 90%, #f0c4e0 100%);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: "SimHei", "黑体", sans-serif;
-    overflow: hidden;
-    user-select: none;
-  }
-
-  #game-wrapper {
-    position: relative;
-    width: 800px;
-    max-width: 100vw;
-  }
-
-  #score-board {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    color: #f0e0ff;
-    font-size: 18px;
-    text-shadow: 0 0 10px #a855f7;
-  }
-
-  #hi-score { color: #e879f9; }
-
-  #game-canvas-wrap {
-    position: relative;
-    width: 800px;
-    max-width: 100vw;
-    height: 220px;
-    overflow: hidden;
-    border-top: 2px solid rgba(168,85,247,0.4);
-    border-bottom: 2px solid rgba(168,85,247,0.4);
-  }
-
-  #game-canvas { width: 100%; height: 100%; }
-
-  #leaderboard {
-    margin-top: 16px;
-    width: 800px;
-    max-width: 100vw;
-    background: rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 12px 20px;
-    color: #f0e0ff;
-  }
-
-  #leaderboard h3 {
-    font-size: 14px;
-    color: #e879f9;
-    margin-bottom: 8px;
-    letter-spacing: 2px;
-  }
-
-  #lb-list { font-size: 13px; line-height: 2; }
-
-  #lb-list .lb-row {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-  }
-
-  #overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: rgba(10,0,20,0.55);
-    color: #f0e0ff;
-    pointer-events: none;
-  }
-
-  #overlay.hidden { display: none; }
-
-  #overlay .title {
-    font-size: 28px;
-    font-weight: bold;
-    text-shadow: 0 0 20px #e879f9;
-  }
-
-  #overlay .hint {
-    font-size: 14px;
-    color: #c4b5fd;
-    animation: blink 1s infinite;
-  }
-
-  @keyframes blink {
-    0%,100% { opacity:1; } 50% { opacity:0.3; }
-  }
-
-  #name-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-  }
-
-  #name-modal.hidden { display: none; }
-
-  #name-modal .box {
-    background: #2d0a4e;
-    border: 1px solid #a855f7;
-    border-radius: 16px;
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    color: #f0e0ff;
-  }
-
-  #name-modal h2 { font-size: 20px; color: #e879f9; }
-
-  #name-input {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid #a855f7;
-    border-radius: 8px;
-    padding: 8px 16px;
-    color: #f0e0ff;
-    font-size: 16px;
-    font-family: inherit;
-    outline: none;
-    width: 200px;
-    text-align: center;
-  }
-
-  #name-submit {
-    background: #7c3aed;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 28px;
-    font-size: 15px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-
-  #name-submit:hover { background: #6d28d9; }
-
-  #controls {
-    display: flex;
-    justify-content: space-between;
-    width: 800px;
-    max-width: 100vw;
-    padding: 12px 20px;
-    gap: 20px;
-    margin-top: 10px;
-  }
-
-  #controls button {
-    flex: 1;
-    height: 64px;
-    border-radius: 16px;
-    border: 2px solid rgba(168,85,247,0.5);
-    background: rgba(124,58,237,0.3);
-    color: #f0e0ff;
-    font-size: 22px;
-    font-family: SimHei, 黑体, sans-serif;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  #controls button:active {
-    background: rgba(124,58,237,0.6);
-  }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+background:linear-gradient(180deg,#1a0533,#7b3fa0,#f0c4e0);
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+min-height:100vh;font-family:SimHei;overflow:hidden;
+}
+#game-wrapper{width:800px;max-width:100vw;}
+#score-board{display:flex;justify-content:space-between;color:#fff;padding:10px;}
+#game-canvas-wrap{position:relative;height:220px;}
+#overlay{
+position:absolute;inset:0;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+background:rgba(0,0,0,.5);color:#fff;
+}
+.hidden{display:none;}
+#controls{display:flex;margin-top:10px;gap:10px;width:800px;max-width:100vw;}
+#controls button{flex:1;height:60px;font-size:20px;}
 </style>
 </head>
-<body>
-
-<div id="name-modal">
-  <div class="box">
-    <h2>🎮 刘星快跑</h2>
-    <p style="font-size:13px;color:#c4b5fd">输入你的名字上排行榜</p>
-    <input id="name-input" type="text" maxlength="8" placeholder="你的名字" />
-    <button id="name-submit">开始</button>
-  </div>
+<body><div id="game-wrapper">
+<div id="score-board">
+<span>得分：<b id="score">0</b></span>
+<span>最高：<b id="best">0</b></span>
+</div><div id="game-canvas-wrap">
+<canvas id="game-canvas" width="800" height="220"></canvas>
+<div id="overlay">
+<div class="title">刘星快跑</div>
+<div class="hint">点击开始</div>
 </div>
-
-<div id="game-wrapper">
-  <div id="score-board">
-    <span>得分：<b id="score">0</b></span>
-    <span id="hi-score">最高：<b id="best">0</b></span>
-  </div>
-
-  <div id="game-canvas-wrap">
-    <canvas id="game-canvas" width="800" height="220"></canvas>
-    <div id="overlay">
-      <div class="title">刘星快跑</div>
-      <div class="hint">按跳跃键开始</div>
-    </div>
-  </div>
-
-  <div id="leaderboard">
-    <h3>🏆 排行榜</h3>
-    <div id="lb-list"><div style="color:#888;font-size:12px">加载中…</div></div>
-  </div>
 </div>
+</div><div id="controls">
+<button id="btn-duck">蹲下</button>
+<button id="btn-jump">跳跃</button>
+</div><script>
+const USE_ONLINE=false;
 
-<div id="controls">
-  <button id="btn-duck"
-    ontouchstart="duck(true)" ontouchend="duck(false)"
-    onmousedown="duck(true)" onmouseup="duck(false)">蹲下</button>
-  <button id="btn-jump"
-    ontouchstart="handleJump()" onmousedown="handleJump()">跳跃</button>
-</div>
+const canvas=document.getElementById('game-canvas');
+const ctx=canvas.getContext('2d');
 
-<script>
-const SUPABASE_URL = 'https://txwskivbvslcammgdbzw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8';
+const W=800,H=220;
+const GROUND=H-40;
 
-async function sbFetch(path, options = {}) {
-  const res = await fetch(SUPABASE_URL + path, {
-    ...options,
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal',
-      ...(options.headers || {})
-    }
-  });
-  if (res.status === 204 || res.headers.get('content-length') === '0') return null;
-  return res.json();
-}
+let PLAYER_W=60;
 
-async function submitScore(name, score) {
-  await sbFetch('/rest/v1/leaderboard', {
-    method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ name, score })
-  });
-}
+const PLAYER_H=34;
+const PLAYER_DUCK_H=18;
 
-async function loadLeaderboard() {
-  const data = await sbFetch('/rest/v1/leaderboard?order=score.desc&limit=10', {
-    headers: { 'Prefer': '' }
-  });
-  const el = document.getElementById('lb-list');
-  if (!data || !data.length) { el.innerHTML = '<div style="color:#888;font-size:12px">暂无记录</div>'; return; }
-  el.innerHTML = data.map((r, i) =>
-    `<div class="lb-row"><span>${['🥇','🥈','🥉'][i] || (i+1+'.')} ${r.name}</span><span>${r.score}</span></div>`
-  ).join('');
-}
+let state='idle',score=0,bestScore=0,frame=0,speed=5;
 
-// ─── 常量 ────────────────────────────────────────────────────
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
-const W = 800, H = 220;
-const GROUND = H - 40;        // 地面Y坐标
-const PLAYER_FS = 36;         // 正常字号
-const PLAYER_DUCK_FS = 20;    // 蹲下字号
-// 刘星站立时碰撞箱高度
-const PLAYER_H = 34;
-const PLAYER_DUCK_H = 18;
-const PLAYER_W = 60;
+const player={x:100,y:GROUND,vy:0,grounded:true,ducking:false};
 
-// "一"的三种高度类型
-// high: 贴近地面上方，必须跳过
-// mid:  腰部，必须蹲过
-// safe: 高空，自动飞过不需要操作
-const YI_TYPES = {
-  high: { yOffset: -8,  label: 'must_jump' },  // y = GROUND - PLAYER_H - 8  (头顶高度)
-  mid:  { yOffset: -50, label: 'must_duck' },  // y = GROUND - 50 (腰部，蹲下可过)
-  safe: { yOffset: -120, label: 'safe' }        // y = GROUND - 120 (高空)
-};
+let obstacles=[];
 
-let playerName = '匿名';
-let state = 'idle';
-let score = 0, bestScore = 0, frame = 0;
-let speed = 5;
-
-const player = {
-  x: 100,
-  y: GROUND,
-  vy: 0,
-  grounded: true,
-  ducking: false,
-  wobble: 0
-};
-
-let obstacles = [];
-let particles = [];
-
-let stars = Array.from({length: 60}, () => ({
-  x: Math.random() * W,
-  y: Math.random() * (GROUND - 40),
-  r: Math.random() * 1.5 + 0.3,
-  a: Math.random()
+let stars=Array.from({length:60},()=>({
+x:Math.random()*W,
+y:Math.random()*(GROUND-40),
+r:Math.random()*1.5
 }));
 
-// ─── 障碍物生成 ──────────────────────────────────────────────
-function spawnObstacle() {
-  const roll = Math.random();
-
-  if (roll < 0.55) {
-    // 黄玲：地面障碍，只能跳过
-    // 随机宽度：1~3个字并排
-    const count = Math.random() < 0.4 ? (Math.random() < 0.5 ? 2 : 3) : 1;
-    const fs = 32;
-    const spacing = fs + 4;
-    for (let i = 0; i < count; i++) {
-      obstacles.push({
-        type: 'ground',
-        x: W + 10 + i * spacing,
-        // 底部贴地面
-        y: GROUND,
-        size: fs,
-        label: '黄玲',
-        w: fs - 4,
-        h: fs
-      });
-    }
-  } else {
-    // "一"：空中障碍，三种高度
-    const r2 = Math.random();
-    let yiY;
-    if (r2 < 0.35) {
-      // 必须跳过：贴近地面上方，站着会撞头
-      yiY = GROUND - PLAYER_H - 6;
-    } else if (r2 < 0.7) {
-      // 必须蹲过：腰部高度，跳起来反而撞，蹲下可过
-      yiY = GROUND - 55;
-    } else {
-      // 安全高空：飞得很高，不需要操作
-      yiY = GROUND - 130;
-    }
-    obstacles.push({
-      type: 'sky',
-      x: W + 10,
-      y: yiY,
-      size: 36,
-      label: '一',
-      w: 40,
-      h: 14  // "一"字实际高度很薄
-    });
-  }
+function measurePlayer(){
+ctx.font="bold 36px SimHei";
+PLAYER_W=ctx.measureText('刘星').width;
 }
+measurePlayer();
 
-let nextSpawn = 90;
-
-// ─── 玩家操作 ────────────────────────────────────────────────
-function jump() {
-  if (!player.grounded) return;
-  player.vy = -13.5;
-  player.grounded = false;
-}
-
-function duck(on) {
-  player.ducking = on;
-}
-
-function handleJump() {
-  if (state === 'idle' || state === 'dead') startGame();
-  else jump();
-}
-
-// ─── 游戏流程 ────────────────────────────────────────────────
-function startGame() {
-  if (state === 'running') return;
-  state = 'running';
-  score = 0; frame = 0; speed = 5;
-  obstacles = []; particles = [];
-  player.y = GROUND; player.vy = 0;
-  player.grounded = true; player.ducking = false;
-  nextSpawn = 90;
-  document.getElementById('overlay').classList.add('hidden');
-}
-
-function gameOver() {
-  state = 'dead';
-  if (score > bestScore) bestScore = score;
-  document.getElementById('best').textContent = bestScore;
-  for (let i = 0; i < 12; i++) {
-    particles.push({
-      x: player.x, y: player.y,
-      vx: (Math.random()-0.5)*6, vy: -Math.random()*8,
-      life: 1, char: ['刘','星','！','？','…'][Math.floor(Math.random()*5)]
-    });
-  }
-  submitScore(playerName, score).then(loadLeaderboard);
-  const ov = document.getElementById('overlay');
-  ov.classList.remove('hidden');
-  ov.innerHTML = `
-    <div class="title">黄玲抓住了！</div>
-    <div style="font-size:16px;color:#e879f9">得分：${score}</div>
-    <div class="hint">按跳跃键重新开始</div>
-  `;
-}
-
-// ─── 碰撞检测 ────────────────────────────────────────────────
-function collides(o) {
-  // 玩家碰撞箱
-  const pH = player.ducking ? PLAYER_DUCK_H : PLAYER_H;
-  const pW = player.ducking ? PLAYER_W - 10 : PLAYER_W;
-  const px1 = player.x - pW / 2 + 6;
-  const px2 = player.x + pW / 2 - 6;
-  const py1 = player.y - pH;   // 头顶
-  const py2 = player.y;        // 脚底（贴地面）
-
-  // 障碍物碰撞箱
-  const ox1 = o.x - o.w / 2 + 4;
-  const ox2 = o.x + o.w / 2 - 4;
-  const oy2 = o.y;             // 障碍物底部
-  const oy1 = o.y - o.h;      // 障碍物顶部
-
-  return px1 < ox2 && px2 > ox1 && py1 < oy2 && py2 > oy1;
-}
-
-// ─── 更新 ────────────────────────────────────────────────────
-function update() {
-  if (state !== 'running') return;
-  frame++;
-  score = Math.floor(frame / 6);
-  document.getElementById('score').textContent = score;
-  speed = 5 + score * 0.004;
-
-  stars.forEach(s => { s.x -= speed * 0.15; if (s.x < 0) s.x = W; });
-
-  // 玩家物理
-  player.wobble = Math.sin(frame * 0.35) * 3;
-  if (!player.grounded) {
-    player.vy += 0.75;
-    player.y += player.vy;
-    if (player.y >= GROUND) {
-      player.y = GROUND; player.vy = 0; player.grounded = true;
-    }
-  }
-
-  // 生成障碍物
-  nextSpawn--;
-  if (nextSpawn <= 0) {
-    spawnObstacle();
-    nextSpawn = Math.max(40, Math.floor(70 + Math.random() * 70 - speed * 1.5));
-  }
-  obstacles.forEach(o => { o.x -= speed; });
-  obstacles = obstacles.filter(o => o.x > -100);
-
-  // 碰撞
-  for (const o of obstacles) {
-    if (collides(o)) { gameOver(); return; }
-  }
-
-  // 粒子
-  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03; });
-  particles = particles.filter(p => p.life > 0);
-}
-
-// ─── 绘制 ────────────────────────────────────────────────────
-function drawStars() {
-  stars.forEach(s => {
-    ctx.save();
-    ctx.globalAlpha = s.a * 0.8;
-    ctx.fillStyle = '#f0e0ff';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  });
-}
-
-function drawGround() {
-  ctx.strokeStyle = 'rgba(168,85,247,0.5)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, GROUND + 2);
-  ctx.lineTo(W, GROUND + 2);
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(168,85,247,0.25)';
-  for (let i = 0; i < W; i += 30 + Math.sin(i)*8) {
-    ctx.fillRect(i, GROUND + 4, 10 + Math.sin(i*0.1)*6, 1.5);
-  }
-}
-
-function drawPlayer() {
-  const fs = player.ducking ? PLAYER_DUCK_FS : PLAYER_FS;
-  ctx.save();
-  ctx.font = `bold ${fs}px SimHei, 黑体, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.shadowColor = '#e879f9';
-  ctx.shadowBlur = 14;
-  ctx.fillStyle = '#ffffff';
-  const drawX = player.x + (state === 'running' ? player.wobble : 0);
-  ctx.fillText('刘星', drawX, player.y);
-  ctx.restore();
-}
-
-function drawObstacles() {
-  obstacles.forEach(o => {
-    ctx.save();
-    ctx.font = `bold ${o.size}px SimHei, 黑体, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.shadowColor = o.type === 'sky' ? '#fbbf24' : '#f43f5e';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = o.type === 'sky' ? '#fde68a' : '#fda4af';
-    ctx.fillText(o.label, o.x, o.y);
-    ctx.restore();
-  });
-}
-
-function drawParticles() {
-  particles.forEach(p => {
-    ctx.save();
-    ctx.globalAlpha = p.life;
-    ctx.font = 'bold 18px SimHei';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#e879f9';
-    ctx.fillText(p.char, p.x, p.y);
-    ctx.restore();
-  });
-}
-
-function drawScore() {
-  if (state !== 'running') return;
-  ctx.save();
-  ctx.font = '14px SimHei';
-  ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(240,224,255,0.6)';
-  ctx.fillText(`× ${score}`, W - 10, 24);
-  ctx.restore();
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#1a0533');
-  grad.addColorStop(0.6, '#3d1a6e');
-  grad.addColorStop(1, '#7b3fa0');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  drawStars();
-  drawGround();
-  drawObstacles();
-  drawPlayer();
-  drawParticles();
-  drawScore();
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-// ─── 键盘 ────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); handleJump(); }
-  if (e.code === 'ArrowDown') { e.preventDefault(); duck(true); }
+function spawnObstacle(){
+if(Math.random()<0.6){
+obstacles.push({
+type:'ground',
+x:W+10,
+y:GROUND,
+size:32,
+label:'黄玲',
+w:28,
+h:32
 });
-document.addEventListener('keyup', e => {
-  if (e.code === 'ArrowDown') duck(false);
+}else{
+let y;
+let r=Math.random();
+if(r<0.33) y=GROUND-PLAYER_H-6;
+else if(r<0.66) y=GROUND-55;
+else y=GROUND-120;
+
+obstacles.push({
+type:'sky',
+x:W+10,
+y:y,
+size:36,
+label:'一',
+w:40,
+h:22
+});
+}
+}
+
+let nextSpawn=80;
+
+function jump(){
+if(!player.grounded)return;
+player.vy=-13;
+player.grounded=false;
+}
+
+function duck(on){player.ducking=on;}
+
+function startGame(){
+state='running';
+score=0;frame=0;speed=5;
+obstacles=[];
+}
+
+function gameOver(){
+state='dead';
+bestScore=Math.max(bestScore,score);
+document.getElementById('best').textContent=bestScore;
+
+const ov=document.getElementById('overlay');
+ov.classList.remove('hidden');
+ov.querySelector('.title').textContent='游戏结束';
+ov.querySelector('.hint').textContent='点击重新开始';
+}
+
+function collides(o){
+const pH=player.ducking?PLAYER_DUCK_H:PLAYER_H;
+const px1=player.x-PLAYER_W/2;
+const px2=player.x+PLAYER_W/2;
+const py1=player.y-pH+(player.ducking?10:0);
+const py2=player.y;
+
+const ox1=o.x-o.w/2;
+const ox2=o.x+o.w/2;
+const oy1=o.y-o.h;
+const oy2=o.y;
+
+return px1<ox2&&px2>ox1&&py1<oy2&&py2>oy1;
+}
+
+function update(){
+if(state!=='running')return;
+
+frame++;
+score=Math.floor(frame/6);
+document.getElementById('score').textContent=score;
+
+speed=5+score*0.003;
+
+stars.forEach(s=>{
+s.x-=speed*0.2;
+if(s.x<0){
+s.x=W;
+s.y=Math.random()*(GROUND-40);
+}
 });
 
-// ─── 昵称弹窗 ────────────────────────────────────────────────
-document.getElementById('name-submit').addEventListener('click', () => {
-  const v = document.getElementById('name-input').value.trim();
-  if (v) playerName = v;
-  document.getElementById('name-modal').classList.add('hidden');
-  loadLeaderboard();
-});
-document.getElementById('name-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('name-submit').click();
+if(!player.grounded){
+player.vy+=0.7;
+player.y+=player.vy;
+if(player.y>=GROUND){
+player.y=GROUND;
+player.vy=0;
+player.grounded=true;
+}
+}
+
+nextSpawn--;
+if(nextSpawn<=0){
+spawnObstacle();
+nextSpawn=Math.max(55,80+Math.random()*80-speed);
+}
+
+obstacles.forEach(o=>o.x-=speed);
+obstacles=obstacles.filter(o=>o.x>-50);
+
+for(const o of obstacles){
+if(collides(o)){gameOver();return;}
+}
+}
+
+function draw(){
+ctx.clearRect(0,0,W,H);
+
+ctx.fillStyle="#1a0533";
+ctx.fillRect(0,0,W,H);
+
+stars.forEach(s=>{
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+ctx.fillStyle="#fff";
+ctx.fill();
 });
 
-loadLeaderboard();
+ctx.fillStyle="#aaa";
+ctx.fillRect(0,GROUND,W,2);
+
+ctx.font="bold 36px SimHei";
+ctx.fillStyle="#fff";
+ctx.fillText("刘星",player.x-20,player.y);
+
+obstacles.forEach(o=>{
+ctx.font=`bold ${o.size}px SimHei`;
+ctx.fillStyle=o.type==='sky'?"yellow":"pink";
+ctx.fillText(o.label,o.x,o.y);
+});
+}
+
+function loop(){
+update();
+draw();
+requestAnimationFrame(loop);
+}
 loop();
-</script>
-</body>
+
+const isTouch='ontouchstart'in window;
+
+document.getElementById('btn-jump').addEventListener(isTouch?'touchstart':'mousedown',()=>{
+if(state!=='running'){startGame();document.getElementById('overlay').classList.add('hidden');}
+else jump();
+});
+
+document.getElementById('btn-duck').addEventListener(isTouch?'touchstart':'mousedown',()=>duck(true));
+document.getElementById('btn-duck').addEventListener(isTouch?'touchend':'mouseup',()=>duck(false));
+
+</script></body>
 </html>
