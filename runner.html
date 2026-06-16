@@ -126,7 +126,6 @@ button{
 <button id="jumpBtn">跳跃</button>
 </div>
 
-<!-- 广告 -->
 <div id="adBox">
   <div class="card">
     <h3>📢 欢迎许愿</h3>
@@ -140,7 +139,9 @@ button{
 
 // ================= SUPABASE =================
 const SUPABASE_URL="https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // 建议换成匿名 key
+
+const GAME_TYPE="runner"; // ⭐关键：区分游戏
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -150,19 +151,26 @@ async function submitScore(name,score){
       Authorization:"Bearer "+SUPABASE_KEY,
       "Content-Type":"application/json"
     },
-    body:JSON.stringify({name,score})
+    body:JSON.stringify({
+      name,
+      score,
+      game_type: GAME_TYPE   // ⭐关键
+    })
   });
 }
 
 async function loadLB(){
   const r=await fetch(
-    SUPABASE_URL+"/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
+    SUPABASE_URL+
+    "/rest/v1/leaderboard?select=name,score&game_type=eq."+GAME_TYPE+"&order=score.desc&limit=10",
     {headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}}
   );
 
   const d=await r.json();
+
   document.getElementById("lb").innerHTML =
-    "🏆排行榜<br>"+d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
+    "🏆排行榜<br>"+
+    d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
 }
 
 // ================= CANVAS =================
@@ -184,13 +192,11 @@ const GROUND=190;
 const GRAVITY=1800;
 const JUMP_V=-650;
 
-// ================= 刘星 =================
 const NORMAL_SIZE=64;
 const DUCK_SIZE=30;
 
 let isDuck=false;
 
-// ================= 状态 =================
 let state="idle";
 let score=0,best=0;
 
@@ -220,17 +226,13 @@ document.getElementById("jumpBtn").addEventListener("pointerdown",(e)=>{
   jump();
 },{passive:false});
 
-// 下蹲
 const duckBtn=document.createElement("button");
 duckBtn.innerText="下蹲";
 duckBtn.style.flex="1";
-duckBtn.style.height="60px";
-duckBtn.style.fontSize="18px";
 document.getElementById("controls").appendChild(duckBtn);
 
 duckBtn.addEventListener("pointerdown",()=>isDuck=true);
 duckBtn.addEventListener("pointerup",()=>isDuck=false);
-duckBtn.addEventListener("pointerleave",()=>isDuck=false);
 
 // ================= 开始 =================
 function startGame(){
@@ -250,31 +252,17 @@ function startGame(){
   loadLB();
 }
 
-// ================= ⭐ 修复：空中+地面黄玲 =================
+// ================= 生成 =================
 function spawn(){
+  const air=Math.random()<0.5;
+  const y=air?GROUND-60:GROUND;
 
-  const air = Math.random() < 0.5;
-
-  const y = air ? GROUND - 60 : GROUND;
-
-  obs.push({
-    x:W(),
-    y:y,
-    label:"黄",
-    h:34
-  });
-
-  obs.push({
-    x:W()+26,
-    y:y,
-    label:"玲",
-    h:34
-  });
+  obs.push({x:W(),y,label:"黄",h:34});
+  obs.push({x:W()+26,y,label:"玲",h:34});
 }
 
 // ================= 碰撞 =================
 function collide(o){
-
   const size=isDuck?DUCK_SIZE:NORMAL_SIZE;
 
   const px1=player.x-28;
@@ -332,9 +320,8 @@ function update(dt){
   }
 }
 
-// ================= 绘制 =================
+// ================= 渲染 =================
 function draw(){
-
   ctx.clearRect(0,0,W(),240);
   ctx.fillStyle="#1a0533";
   ctx.fillRect(0,0,W(),240);
@@ -349,16 +336,13 @@ function draw(){
   ctx.font=`bold ${isDuck?DUCK_SIZE:NORMAL_SIZE}px SimHei`;
   ctx.textAlign="center";
   ctx.fillStyle="#d9ccff";
-  ctx.shadowBlur=8;
   ctx.fillText("刘星",player.x,player.y);
   ctx.restore();
 
   ctx.font="22px SimHei";
   ctx.fillStyle="#fbbf24";
 
-  obs.forEach(o=>{
-    ctx.fillText(o.label,o.x,o.y);
-  });
+  obs.forEach(o=>ctx.fillText(o.label,o.x,o.y));
 }
 
 // ================= 结束 =================
@@ -386,20 +370,21 @@ function loop(t){
 }
 requestAnimationFrame(loop);
 
-// ================= 排行榜 =================
-loadLB();
-
-// ================= 广告（每次打开都弹） =================
+// ================= 广告（只弹一次） =================
 function showAd(){
-  document.getElementById("adBox").style.display="flex";
+  if(!localStorage.getItem("ad")){
+    document.getElementById("adBox").style.display="flex";
+    localStorage.setItem("ad","1");
+  }
 }
+
 function closeAd(){
   document.getElementById("adBox").style.display="none";
 }
 
-window.addEventListener("load",()=>{
-  setTimeout(showAd,500);
-});
+window.addEventListener("load",()=>setTimeout(showAd,500));
+
+loadLB();
 
 </script>
 
