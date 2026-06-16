@@ -5,24 +5,35 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>贪吃蛇</title>
 <style>
-*{ box-sizing:border-box; }
+*{ box-sizing:border-box; margin:0; padding:0; }
 body{
-  margin:0;
   background:#1a0533;
   color:#fff;
   font-family:SimHei,sans-serif;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* 上方可滚动区域 */
+#scrollArea{
+  flex:1;
+  overflow-y:auto;
   display:flex;
   flex-direction:column;
   align-items:center;
-  padding-bottom:20px;
+  padding:8px 16px;
+  gap:8px;
 }
+
 #top{
   width:100%;
   display:flex;
   justify-content:space-between;
-  padding:10px 16px;
   font-size:16px;
 }
+
 #wrap{ position:relative; }
 canvas{
   display:block;
@@ -30,6 +41,7 @@ canvas{
   border:1px solid rgba(255,255,255,.15);
   border-radius:6px;
 }
+
 #overlay{
   display:none;
   position:absolute;
@@ -42,44 +54,49 @@ canvas{
   gap:12px;
 }
 #overlay.show{ display:flex; }
-#overlay h2{ margin:0; font-size:22px; color:#f87171; }
-#overlay p { margin:0; font-size:14px; color:#c4b5fd; }
+#overlay h2{ font-size:20px; color:#f87171; }
+#overlay p { font-size:13px; color:#c4b5fd; }
 #nameInput{
-  width:200px;
-  padding:8px 12px;
+  width:180px;
+  padding:7px 10px;
   border-radius:8px;
   border:1px solid #7c3aed;
   background:#1a0533;
   color:#fff;
-  font-size:15px;
+  font-size:14px;
   font-family:SimHei,sans-serif;
   text-align:center;
   outline:none;
 }
-#nameInput:focus{ border-color:#a78bfa; }
 #submitBtn{
-  padding:9px 28px;
+  padding:8px 24px;
   background:#7c3aed;
   color:#fff;
   border:none;
   border-radius:8px;
-  font-size:15px;
+  font-size:14px;
   font-family:SimHei,sans-serif;
   cursor:pointer;
 }
-#rankWrap{
-  width:100%;
-  padding:0 16px;
-  margin-top:10px;
+
+#rankWrap{ width:100%; }
+#rankWrap h3{ font-size:14px; color:#a78bfa; margin-bottom:4px; }
+#rank{ font-size:13px; line-height:1.9; color:#e2d9f3; }
+
+/* 底部固定按键区 */
+#controls{
+  flex-shrink:0;
+  display:flex;
+  justify-content:center;
+  padding:10px 0 16px;
+  background:#1a0533;
+  border-top:1px solid rgba(255,255,255,.08);
 }
-#rankWrap h3{ margin:6px 0; font-size:15px; color:#a78bfa; }
-#rank{ font-size:14px; line-height:1.8; color:#e2d9f3; }
-#controls{ margin-top:12px; }
 .dpad{ display:flex; flex-direction:column; align-items:center; gap:6px; }
-.middle{ display:flex; gap:46px; }
+.middle{ display:flex; gap:44px; }
 .dpad button{
-  width:66px;
-  height:66px;
+  width:64px;
+  height:64px;
   font-size:22px;
   border-radius:12px;
   background:#7c3aed;
@@ -95,26 +112,30 @@ canvas{
 </head>
 <body>
 
-<div id="top">
-  <div>分数：<b id="score">0</b></div>
-  <div>最高：<b id="best">0</b></div>
-</div>
+<!-- 滚动区 -->
+<div id="scrollArea">
+  <div id="top">
+    <div>分数：<b id="score">0</b></div>
+    <div>最高：<b id="best">0</b></div>
+  </div>
 
-<div id="wrap">
-  <canvas id="c"></canvas>
-  <div id="overlay">
-    <h2>游戏结束</h2>
-    <p id="finalScore"></p>
-    <input id="nameInput" placeholder="输入你的名字" maxlength="12">
-    <button id="submitBtn" onclick="handleSubmit()">提交并重玩</button>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="overlay">
+      <h2>游戏结束</h2>
+      <p id="finalScore"></p>
+      <input id="nameInput" placeholder="输入你的名字" maxlength="12">
+      <button id="submitBtn" onclick="handleSubmit()">提交并重玩</button>
+    </div>
+  </div>
+
+  <div id="rankWrap">
+    <h3>🏆 排行榜</h3>
+    <div id="rank">加载中…</div>
   </div>
 </div>
 
-<div id="rankWrap">
-  <h3>🏆 排行榜</h3>
-  <div id="rank">加载中…</div>
-</div>
-
+<!-- 固定底部按键 -->
 <div id="controls">
   <div class="dpad">
     <button ontouchstart="e(event,0,-1)" onclick="setDir(0,-1)">▲</button>
@@ -134,7 +155,6 @@ const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const GRID = 20;
 
-// ===== 动态尺寸：取屏幕宽度，留16px边距，对齐到格子整数倍 =====
 const RAW = Math.min(window.innerWidth - 32, 480);
 const CELL = Math.floor(RAW / GRID);
 const SIZE = CELL * GRID;
@@ -166,7 +186,6 @@ function setDir(x, y){
   nextDir = {x, y};
 }
 
-// 触摸按钮：阻止默认事件避免触发 onclick 两次
 function e(evt, x, y){
   evt.preventDefault();
   setDir(x, y);
@@ -177,7 +196,6 @@ document.addEventListener("keydown", ev => {
   if(map[ev.key]){ ev.preventDefault(); setDir(...map[ev.key]); }
 });
 
-// 触摸滑动控制
 let tx=0, ty=0;
 canvas.addEventListener("touchstart", ev=>{ tx=ev.touches[0].clientX; ty=ev.touches[0].clientY; },{passive:true});
 canvas.addEventListener("touchend", ev=>{
@@ -214,12 +232,10 @@ function tick(){
 function draw(){
   ctx.fillStyle="#0b0618";
   ctx.fillRect(0,0,SIZE,SIZE);
-
   ctx.fillStyle="#ef4444";
   ctx.beginPath();
   ctx.roundRect(food.x*CELL+1, food.y*CELL+1, CELL-2, CELL-2, 4);
   ctx.fill();
-
   snake.forEach((s,i)=>{
     ctx.fillStyle = i===0?"#86efac":"#4ade80";
     ctx.beginPath();
@@ -254,7 +270,7 @@ async function submitScore(name,sc){
       },
       body:JSON.stringify({name,score:sc,game_type:"snake"})
     });
-  }catch(e){ console.error(e); }
+  }catch(err){ console.error(err); }
 }
 
 async function loadRank(){
@@ -268,7 +284,7 @@ async function loadRank(){
     document.getElementById("rank").innerHTML=Array.isArray(data)&&data.length
       ?data.map((x,i)=>`${medals[i]||i+1+"."} ${x.name} — ${x.score}`).join("<br>")
       :"暂无数据";
-  }catch(e){ document.getElementById("rank").innerText="加载失败"; }
+  }catch(err){ document.getElementById("rank").innerText="加载失败"; }
 }
 
 initState(); draw(); startLoop(); loadRank();
