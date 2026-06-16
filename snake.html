@@ -30,22 +30,40 @@ canvas{
   border:1px solid rgba(255,255,255,.15);
 }
 
+/* ===== 十字按键 ===== */
 #controls{
-  margin-top:10px;
-  display:flex;
-  gap:10px;
+  margin-top:15px;
   width:100%;
   max-width:520px;
+  display:flex;
+  justify-content:center;
 }
 
-button{
-  flex:1;
-  padding:12px;
-  font-size:18px;
-  border:none;
-  border-radius:8px;
+.dpad{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+
+.middle{
+  display:flex;
+  gap:50px;
+}
+
+.dpad button{
+  width:70px;
+  height:70px;
+  font-size:22px;
+  border-radius:12px;
   background:#7c3aed;
   color:#fff;
+  border:none;
+}
+
+.dpad button:active{
+  transform:scale(0.92);
+  background:#5b21b6;
 }
 </style>
 </head>
@@ -59,11 +77,18 @@ button{
 
 <canvas id="c" width="360" height="360"></canvas>
 
+<!-- 十字控制 -->
 <div id="controls">
-<button onclick="setDir(0,-1)">⬆</button>
-<button onclick="setDir(0,1)">⬇</button>
-<button onclick="setDir(-1,0)">⬅</button>
-<button onclick="setDir(1,0)">➡</button>
+  <div class="dpad">
+    <button onclick="setDir(0,-1)">▲</button>
+
+    <div class="middle">
+      <button onclick="setDir(-1,0)">◀</button>
+      <button onclick="setDir(1,0)">▶</button>
+    </div>
+
+    <button onclick="setDir(0,1)">▼</button>
+  </div>
 </div>
 
 <script>
@@ -80,7 +105,6 @@ let food = randFood();
 
 let score = 0;
 let best = 0;
-let speed = 120;
 
 function randFood(){
   return {
@@ -89,14 +113,15 @@ function randFood(){
   };
 }
 
+// 防反向
 function setDir(x,y){
-  // 防止反向
   if(snake.length>1){
     if(x === -dir.x && y === -dir.y) return;
   }
   dir = {x,y};
 }
 
+// 键盘支持
 document.addEventListener("keydown",e=>{
   if(e.key==="ArrowUp") setDir(0,-1);
   if(e.key==="ArrowDown") setDir(0,1);
@@ -166,7 +191,7 @@ function loop(){
   draw();
 }
 
-setInterval(loop, speed);
+setInterval(loop,120);
 
 </script>
 
