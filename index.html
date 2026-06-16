@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>小游戏大厅</title>
-
 <style>
+*{ box-sizing:border-box; margin:0; padding:0; }
 body{
-  margin:0;
-  height:100vh;
+  min-height:100vh;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -16,27 +15,100 @@ body{
   background:#0f0a1f;
   color:#fff;
   font-family:SimHei;
+  padding:20px;
+  gap:10px;
 }
 
+h2{
+  font-size:22px;
+  margin-bottom:4px;
+}
+
+/* 公告栏 */
+#notice{
+  width:100%;
+  max-width:320px;
+  background:#1e1040;
+  border:1px solid #7c3aed;
+  border-radius:12px;
+  padding:12px 16px;
+  margin-bottom:6px;
+}
+#notice .title{
+  font-size:13px;
+  color:#a78bfa;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#notice .title::before{
+  content:"";
+  display:inline-block;
+  width:6px; height:6px;
+  border-radius:50%;
+  background:#7c3aed;
+  box-shadow:0 0 6px #7c3aed;
+}
+#noticeList{
+  list-style:none;
+  font-size:13px;
+  line-height:2;
+  color:#e2d9f3;
+}
+#noticeList li{
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:2px 0;
+}
+#noticeList li:last-child{ border-bottom:none; }
+#noticeList .tag{
+  display:inline-block;
+  font-size:11px;
+  padding:1px 6px;
+  border-radius:4px;
+  margin-right:4px;
+  background:#7c3aed;
+  color:#fff;
+}
+#noticeList .tag.new{ background:#06b6d4; }
+#noticeList .tag.fix{ background:#10b981; }
+
+/* 按钮 */
 button{
-  width:220px;
+  width:100%;
+  max-width:320px;
   padding:15px;
-  margin:10px;
   font-size:18px;
   border:none;
   border-radius:10px;
   background:#7c3aed;
   color:#fff;
+  font-family:SimHei;
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:background .15s;
 }
+button:active{ background:#5b21b6; }
 </style>
 </head>
-
 <body>
 
 <h2>🎮 小游戏大厅</h2>
 
-<button onclick="location.href='runner.html'">刘星快跑</button>
-<button onclick="location.href='snake.html'">贪吃蛇</button>
-<button onclick="location.href='subway.html'">地铁跑酷</button>
+<!-- 公告栏 -->
+<div id="notice">
+  <div class="title">📢 公告栏</div>
+  <ul id="noticeList">
+    <li><span class="tag new">新</span>地铁跑酷上线！</li>
+    <li><span class="tag fix">修复</span>贪吃蛇排行榜过滤问题</li>
+    <li><span class="tag">公告</span>6月17日清榜</li>
+    <li><span class="tag fix">QQ</span>2181843044<li/>
+  </ul>
+</div>
+
+<button onclick="location.href='runner.html'">🏃 刘星快跑</button>
+<button onclick="location.href='snake.html'">🐍 贪吃蛇</button>
+<button onclick="location.href='subway.html'">🚇 地铁跑酷</button>
+
 </body>
 </html>
