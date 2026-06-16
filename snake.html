@@ -253,8 +253,8 @@ function gameOver(){
 
 function handleSubmit(){
   const name=document.getElementById("nameInput").value.trim()||"玩家";
-  document.getElementById("overlay").classList.remove("show");
-  if(name) submitScore(name,score).then(loadRank);
+document.getElementById("overlay").classList.remove("show");
+submitScore(name,score).then(loadRank);
   initState(); draw(); startLoop();
 }
 
