@@ -214,9 +214,9 @@ const obstacles=[], coinMeshes=[];
 
 // ============ 材质 ============
 const obsMats=[
-  new THREE.MeshLambertMaterial({color:0xef4444}),
-  new THREE.MeshLambertMaterial({color:0xf97316}),
-  new THREE.MeshLambertMaterial({color:0xeab308}),
+  new THREE.MeshLambertMaterial({color:0xef4444}), // 红：普通
+  new THREE.MeshLambertMaterial({color:0xf97316}), // 橙：横梁
+  new THREE.MeshLambertMaterial({color:0xeab308}), // 黄：双轨
 ];
 const coinGeo = new THREE.CylinderGeometry(0.3,0.3,0.1,16);
 const coinMat = new THREE.MeshLambertMaterial({color:0xfbbf24});
@@ -226,22 +226,42 @@ function spawnObstacle(){
   const type = Math.random();
   const l = Math.floor(Math.random()*3);
 
-  const addBlock = (x, h, mat, isLow)=>{
-    const m = new THREE.Mesh(new THREE.BoxGeometry(1.8,h,1), mat);
-    m.position.set(x, h/2, -55);
-    m.userData.type = isLow?"low":"block";
+  const addBlock = (x, h, y, mat)=>{
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1), mat);
+    m.position.set(x, y, -55);
     m.castShadow = true;
     scene.add(m);
     obstacles.push(m);
   };
 
-  if(type<0.5){
-    addBlock(LANES[l], 1.4, obsMats[0], false);
-  } else if(type<0.75){
-    addBlock(LANES[l], 0.5, obsMats[1], true);
+  if(type < 0.3){
+    // 普通地面障碍：单轨道，跳跃躲避
+    addBlock(LANES[l], 1.4, 0.7, obsMats[0]);
+
+  } else if(type < 0.5){
+    // 双轨道障碍：换道躲避
+    addBlock(LANES[l], 1.4, 0.7, obsMats[2]);
+    addBlock(LANES[(l+1)%3], 1.4, 0.7, obsMats[2]);
+
+  } else if(type < 0.7){
+    // 低空横梁：三轨道全挡，必须滑铲通过
+    // 底部 y=1.0，玩家站立头顶 y=1.4 → 碰撞
+    // 滑铲后头顶 y=0.55 → 安全通过
+    const m = new THREE.Mesh(new THREE.BoxGeometry(8.5, 1.0, 1.2), obsMats[1]);
+    m.position.set(0, 1.5, -55);
+    m.castShadow = true;
+    scene.add(m);
+    obstacles.push(m);
+
+  } else if(type < 0.85){
+    // 两侧地面障碍 + 中间空：换到中间轨道
+    addBlock(LANES[0], 1.4, 0.7, obsMats[0]);
+    addBlock(LANES[2], 1.4, 0.7, obsMats[0]);
+
   } else {
-    addBlock(LANES[l], 1.4, obsMats[2], false);
-    addBlock(LANES[(l+1)%3], 1.4, obsMats[2], false);
+    // 低地面障碍：两轨道，跳跃躲避
+    addBlock(LANES[l], 0.5, 0.25, obsMats[0]);
+    addBlock(LANES[(l+2)%3], 0.5, 0.25, obsMats[0]);
   }
 }
 
@@ -260,13 +280,21 @@ function spawnCoins(){
 
 // ============ 碰撞检测 ============
 function collides(mesh){
-  if(Math.abs(mesh.position.z-4)>2) return false;
-  if(Math.abs(player.position.x-mesh.position.x)>1.1) return false;
-  const ph = isCrouching?0.4:1.4;
-  const pTop = player.position.y+ph/2;
-  const pBot = player.position.y-ph/2;
+  if(Math.abs(mesh.position.z - 4) > 2) return false;
+
+  // 宽度>5判断为横梁，横跨全轨道不判断x
+  const mw = mesh.geometry.parameters.width;
+  if(mw <= 5){
+    if(Math.abs(player.position.x - mesh.position.x) > 1.1) return false;
+  }
+
+  const ph = isCrouching ? 0.4 : 1.4;
+  const pTop = player.position.y + ph/2;
+  const pBot = player.position.y - ph/2;
   const h = mesh.geometry.parameters.height;
-  return pTop > mesh.position.y-h/2 && pBot < mesh.position.y+h/2;
+  const mTop = mesh.position.y + h/2;
+  const mBot = mesh.position.y - h/2;
+  return pTop > mBot && pBot < mTop;
 }
 
 // ============ 控制 ============
@@ -333,7 +361,7 @@ function gameLoop(){
   // 玩家左右平滑
   player.position.x += (targetX - player.position.x) * 0.18;
 
-  // 相机跟随玩家X轴，始终对准玩家
+  // 相机跟随玩家X轴
   camera.position.x += (player.position.x - camera.position.x) * 0.1;
   camera.lookAt(player.position.x, 0, -5);
 
@@ -348,14 +376,14 @@ function gameLoop(){
   spawnTimer++;
   if(spawnTimer>=60){ spawnTimer=0; Math.random()<0.6?spawnObstacle():spawnCoins(); }
 
-  // 障碍
+  // 障碍移动 & 碰撞
   for(let i=obstacles.length-1;i>=0;i--){
     obstacles[i].position.z += speed;
     if(obstacles[i].position.z>12){ scene.remove(obstacles[i]); obstacles.splice(i,1); continue; }
     if(collides(obstacles[i])) return gameOver();
   }
 
-  // 金币
+  // 金币移动 & 收集
   coinMeshes.forEach(c=>{ c.rotation.z+=0.05; c.position.z+=speed; });
   for(let i=coinMeshes.length-1;i>=0;i--){
     const c=coinMeshes[i];
