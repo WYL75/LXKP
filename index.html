@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>刘星快跑 Mobile</title>
+<title>刘星快跑 FINAL</title>
 
 <style>
 body{
@@ -33,8 +33,8 @@ body{
 canvas{
   width:100%;
   height:240px;
-  border:1px solid rgba(255,255,255,.15);
   display:block;
+  border:1px solid rgba(255,255,255,.15);
 }
 
 #start{
@@ -65,7 +65,6 @@ button{
   max-width:520px;
   margin-top:10px;
   font-size:14px;
-  line-height:1.6;
 }
 
 #controls{
@@ -80,6 +79,26 @@ button{
   flex:1;
   height:60px;
   font-size:18px;
+}
+
+/* 广告 */
+#adBox{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+#adBox .card{
+  width:80%;
+  max-width:320px;
+  background:#2a0a4a;
+  padding:16px;
+  border-radius:12px;
+  text-align:center;
 }
 </style>
 </head>
@@ -107,11 +126,21 @@ button{
 <button id="jumpBtn">跳跃</button>
 </div>
 
+<!-- 广告 -->
+<div id="adBox">
+  <div class="card">
+    <h3>📢 欢迎许愿</h3>
+    <p>欢迎许愿你的想法 / 游戏</p>
+    <p>QQ：2181843044</p>
+    <button onclick="closeAd()">关闭</button>
+  </div>
+</div>
+
 <script>
 
 // ================= SUPABASE =================
-const SUPABASE_URL = "https://txwskivbvslcammgdbzw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8"; // ← 改这里
+const SUPABASE_URL="https://txwskivbvslcammgdbzw.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4d3NraXZidnNsY2FtbWdkYnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDYxMjksImV4cCI6MjA5NzA4MjEyOX0.oCQvKbc7LrgiVXkIqOn8TkykxZvDfCq4cxRatdfRxS8";
 
 async function submitScore(name,score){
   await fetch(SUPABASE_URL+"/rest/v1/leaderboard",{
@@ -126,43 +155,42 @@ async function submitScore(name,score){
 }
 
 async function loadLB(){
-  const r = await fetch(
+  const r=await fetch(
     SUPABASE_URL+"/rest/v1/leaderboard?select=name,score&order=score.desc&limit=10",
-    {
-      headers:{
-        apikey:SUPABASE_KEY,
-        Authorization:"Bearer "+SUPABASE_KEY
-      }
-    }
+    {headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}}
   );
 
-  const d = await r.json();
-
+  const d=await r.json();
   document.getElementById("lb").innerHTML =
-    "<b>🏆排行榜</b><br>" +
-    d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
+    "🏆排行榜<br>"+d.map((x,i)=>`${i+1}. ${x.name} - ${x.score}`).join("<br>");
 }
 
 // ================= CANVAS =================
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
 
 function resize(){
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = 240 * dpr;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.clientWidth*dpr;
+  canvas.height=240*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener("resize",resize);
 resize();
 
-const W = () => canvas.clientWidth;
-const GROUND = 190;
+const W=()=>canvas.clientWidth;
+const GROUND=190;
 
-// ================= GAME =================
-const GRAVITY = 1800;
-const JUMP_V = -650;
+const GRAVITY=1800;
+const JUMP_V=-650;
 
+// ================= 刘星 =================
+const NORMAL_SIZE=64;
+const DUCK_SIZE=30;
+
+let isDuck=false;
+
+// ================= 状态 =================
 let state="idle";
 let score=0,best=0;
 
@@ -170,7 +198,6 @@ let player={
   x:80,
   y:GROUND,
   vy:0,
-  hitW:26,
   grounded:true
 };
 
@@ -178,11 +205,11 @@ let obs=[];
 let spawnTimer=0;
 let speed=260;
 let playerName="玩家";
-let lbTimer=0;
 
-// ================= INPUT =================
+// ================= 控制 =================
 function jump(){
   if(!player.grounded) return;
+  if(isDuck) return;
   player.vy=JUMP_V;
   player.grounded=false;
 }
@@ -193,7 +220,19 @@ document.getElementById("jumpBtn").addEventListener("pointerdown",(e)=>{
   jump();
 },{passive:false});
 
-// ================= START =================
+// 下蹲
+const duckBtn=document.createElement("button");
+duckBtn.innerText="下蹲";
+duckBtn.style.flex="1";
+duckBtn.style.height="60px";
+duckBtn.style.fontSize="18px";
+document.getElementById("controls").appendChild(duckBtn);
+
+duckBtn.addEventListener("pointerdown",()=>isDuck=true);
+duckBtn.addEventListener("pointerup",()=>isDuck=false);
+duckBtn.addEventListener("pointerleave",()=>isDuck=false);
+
+// ================= 开始 =================
 function startGame(){
   playerName=document.getElementById("name").value||"玩家";
 
@@ -208,39 +247,121 @@ function startGame(){
   spawnTimer=0;
 
   document.getElementById("start").style.display="none";
-
   loadLB();
 }
 
-// ================= SPAWN =================
+// ================= ⭐ 修复：空中+地面黄玲 =================
 function spawn(){
-  let y = Math.random()<0.5 ? GROUND : GROUND-60;
 
-  obs.push({x:W(),y,label:"黄",h:34});
-  obs.push({x:W()+26,y,label:"玲",h:34});
+  const air = Math.random() < 0.5;
+
+  const y = air ? GROUND - 60 : GROUND;
+
+  obs.push({
+    x:W(),
+    y:y,
+    label:"黄",
+    h:34
+  });
+
+  obs.push({
+    x:W()+26,
+    y:y,
+    label:"玲",
+    h:34
+  });
 }
 
 // ================= 碰撞 =================
 function collide(o){
 
-  const px1 = player.x - player.hitW/2;
-  const px2 = player.x + player.hitW/2;
+  const size=isDuck?DUCK_SIZE:NORMAL_SIZE;
 
-  const py1 = player.y - 34;
-  const py2 = player.y;
+  const px1=player.x-28;
+  const px2=player.x+28;
 
-  const textW = ctx.measureText(o.label).width;
+  const py1=player.y-size;
+  const py2=player.y;
 
-  const ox1 = o.x - textW/2;
-  const ox2 = o.x + textW/2;
+  const textW=ctx.measureText(o.label).width;
 
-  const oy1 = o.y - o.h;
-  const oy2 = o.y;
+  const ox1=o.x-textW/2;
+  const ox2=o.x+textW/2;
 
-  return px1<ox2 && px2>ox1 && py1<oy2 && py2>oy1;
+  const oy1=o.y-o.h;
+  const oy2=o.y;
+
+  return px1<ox2&&px2>ox1&&py1<oy2&&py2>oy1;
 }
 
-// ================= GAME OVER =================
+// ================= 更新 =================
+function update(dt){
+
+  if(state!=="run") return;
+
+  score+=dt*10;
+  document.getElementById("score").textContent=Math.floor(score);
+
+  speed=260+score*0.5;
+
+  if(!player.grounded){
+    player.vy+=GRAVITY*dt;
+    player.y+=player.vy*dt;
+
+    if(player.y>=GROUND){
+      player.y=GROUND;
+      player.vy=0;
+      player.grounded=true;
+    }
+  }
+
+  spawnTimer-=dt;
+  if(spawnTimer<=0){
+    spawn();
+    spawnTimer=1+Math.random()*0.8;
+  }
+
+  obs.forEach(o=>o.x-=speed*dt);
+  obs=obs.filter(o=>o.x>-100);
+
+  for(let o of obs){
+    if(collide(o)){
+      over();
+      return;
+    }
+  }
+}
+
+// ================= 绘制 =================
+function draw(){
+
+  ctx.clearRect(0,0,W(),240);
+  ctx.fillStyle="#1a0533";
+  ctx.fillRect(0,0,W(),240);
+
+  ctx.beginPath();
+  ctx.moveTo(0,GROUND);
+  ctx.lineTo(W(),GROUND);
+  ctx.strokeStyle="#444";
+  ctx.stroke();
+
+  ctx.save();
+  ctx.font=`bold ${isDuck?DUCK_SIZE:NORMAL_SIZE}px SimHei`;
+  ctx.textAlign="center";
+  ctx.fillStyle="#d9ccff";
+  ctx.shadowBlur=8;
+  ctx.fillText("刘星",player.x,player.y);
+  ctx.restore();
+
+  ctx.font="22px SimHei";
+  ctx.fillStyle="#fbbf24";
+
+  obs.forEach(o=>{
+    ctx.fillText(o.label,o.x,o.y);
+  });
+}
+
+// ================= 结束 =================
 function over(){
   state="dead";
 
@@ -252,100 +373,33 @@ function over(){
   document.getElementById("start").style.display="flex";
 }
 
-// ================= UPDATE =================
-function update(dt){
-
-  if(state!=="run") return;
-
-  score += dt*10;
-  document.getElementById("score").textContent=Math.floor(score);
-
-  speed = 260 + score*0.5;
-
-  if(!player.grounded){
-    player.vy += GRAVITY*dt;
-    player.y += player.vy*dt;
-
-    if(player.y>=GROUND){
-      player.y=GROUND;
-      player.vy=0;
-      player.grounded=true;
-    }
-  }
-
-  spawnTimer -= dt;
-  if(spawnTimer<=0){
-    spawn();
-    spawnTimer = 1 + Math.random()*0.8;
-  }
-
-  obs.forEach(o=>o.x -= speed*dt);
-  obs = obs.filter(o=>o.x>-100);
-
-  for(let o of obs){
-    if(collide(o)){
-      over();
-      return;
-    }
-  }
-
-  // 🔥排行榜低频刷新（关键优化）
-  lbTimer += dt;
-  if(lbTimer>5){
-    loadLB();
-    lbTimer=0;
-  }
-}
-
-// ================= DRAW =================
-function draw(){
-
-  ctx.clearRect(0,0,W(),240);
-
-  ctx.fillStyle="#1a0533";
-  ctx.fillRect(0,0,W(),240);
-
-  ctx.strokeStyle="rgba(255,255,255,0.2)";
-  ctx.beginPath();
-  ctx.moveTo(0,GROUND);
-  ctx.lineTo(W(),GROUND);
-  ctx.stroke();
-
-  // 刘星（柔和）
-  ctx.save();
-  ctx.font="bold 28px SimHei";
-  ctx.textAlign="center";
-  ctx.textBaseline="bottom";
-  ctx.fillStyle="#e6d6ff";
-  ctx.shadowColor="#a855f7";
-  ctx.shadowBlur=6;
-  ctx.fillText("刘星",player.x,player.y);
-  ctx.restore();
-
-  // 黄玲
-  ctx.font="22px SimHei";
-  ctx.fillStyle="#fbbf24";
-
-  obs.forEach(o=>{
-    ctx.fillText(o.label,o.x,o.y);
-  });
-}
-
 // ================= LOOP =================
 let last=0;
-
 function loop(t){
   if(!last) last=t;
-  const dt=(t-last)/1000;
+  let dt=(t-last)/1000;
   last=t;
 
   update(dt);
   draw();
-
   requestAnimationFrame(loop);
 }
-
 requestAnimationFrame(loop);
+
+// ================= 排行榜 =================
+loadLB();
+
+// ================= 广告（每次打开都弹） =================
+function showAd(){
+  document.getElementById("adBox").style.display="flex";
+}
+function closeAd(){
+  document.getElementById("adBox").style.display="none";
+}
+
+window.addEventListener("load",()=>{
+  setTimeout(showAd,500);
+});
 
 </script>
 
