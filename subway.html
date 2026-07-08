@@ -338,8 +338,8 @@
         score = Math.floor(frame * speed * 2);
         document.getElementById("scoreUI").innerText = score;
 
-        if (frame % 180 === 0) {
-            speed = Math.min(speed + 0.006, 0.48);
+        if (frame % 60 === 0) {
+            speed = Math.min(speed + 0.008, 0.52);
         }
 
         tiles.forEach(t => {
